@@ -1,4 +1,4 @@
-apiVersion: agentic.networking.x-k8s.io/v1alpha1
+apiVersion: agentic.networking.x-k8s.io/v1alpha2
 kind: XAccessPolicy
 metadata:
   name: xaccesspolicy-spiffe-matching
@@ -10,18 +10,36 @@ spec:
       name: conformance-primary
   action: Allow
   rules:
+    - name: allow-tester-spiffe-base
+      source:
+        type: SPIFFE
+        spiffe: spiffe://cluster.local/ns/agentic-conformance-infra/sa/conformance-tester-sa
+      authorization:
+        type: Inline
+        headers:
+          - name: Mcp-Method
+            type: RegularExpression
+            value: "^(initialize|ping|tools/list|completion/.*|logging/.*|notifications/.*)$"
+    - name: allow-tester-spiffe-sse-close
+      source:
+        type: SPIFFE
+        spiffe: spiffe://cluster.local/ns/agentic-conformance-infra/sa/conformance-tester-sa
+      authorization:
+        type: Inline
+        methods:
+          - GET
+          - DELETE
     - name: allow-tester-spiffe
       source:
         type: SPIFFE
         spiffe: spiffe://cluster.local/ns/agentic-conformance-infra/sa/conformance-tester-sa
       authorization:
         type: Inline
-        mcp:
-          mcpBaseProtocolMethodsOption: MATCH_BASE_PROTOCOL_METHODS
-          methods:
-            - name: tools/call
-              params:
-                - "get-sum"
+        headers:
+          - name: Mcp-Method
+            value: "tools/call"
+          - name: Mcp-Name
+            value: "get-sum"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

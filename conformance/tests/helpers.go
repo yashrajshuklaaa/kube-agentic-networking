@@ -104,6 +104,7 @@ func execMCPCurl(ctx context.Context, t *testing.T, gatewayIP, namespace, podNam
 		"-H", "Content-Type: application/json",
 		"-H", "Accept: application/json, text/event-stream",
 		"-H", "mcp-protocol-version: 2025-11-25",
+		"-H", "Mcp-Method: initialize",
 		"--data-raw", `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl-client","version":"1.0.0"}}}`,
 		fmt.Sprintf("https://%s:443/mcp", host))
 }
@@ -153,6 +154,8 @@ func (m *mcpTestSession) checkToolCall(ctx context.Context, t *testing.T, toolNa
 		"-H", "Content-Type: application/json",
 		"-H", "Accept: application/json, text/event-stream",
 		"-H", "mcp-protocol-version: 2025-11-25",
+		"-H", "Mcp-Method: tools/call",
+		"-H", fmt.Sprintf("Mcp-Name: %s", toolName),
 		"-H", fmt.Sprintf("mcp-session-id: %s", m.sessionID),
 		"--data-raw", data,
 		fmt.Sprintf("https://%s:443/mcp", m.gatewayIP))
@@ -296,6 +299,7 @@ func (m *mcpTestSession) checkToolsList(ctx context.Context, t *testing.T) (int,
 		"-H", "Content-Type: application/json",
 		"-H", "Accept: application/json, text/event-stream",
 		"-H", "mcp-protocol-version: 2025-11-25",
+		"-H", "Mcp-Method: tools/list",
 		"-H", fmt.Sprintf("mcp-session-id: %s", m.sessionID),
 		"--data-raw", `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
 		fmt.Sprintf("https://%s:443/mcp", m.gatewayIP))
