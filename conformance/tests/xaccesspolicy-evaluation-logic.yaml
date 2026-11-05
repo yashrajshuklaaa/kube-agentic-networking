@@ -126,7 +126,7 @@ spec:
                has(metadata.filter_metadata.mcp_proxy.params.name) &&
                metadata.filter_metadata.mcp_proxy.params.name in ["get-sum", "get-env"])
 ---
-apiVersion: agentic.networking.x-k8s.io/v1alpha1
+apiVersion: agentic.networking.x-k8s.io/v1alpha2
 kind: XAccessPolicy
 metadata:
   name: xaccesspolicy-eval-extauth
@@ -153,7 +153,7 @@ spec:
           name: conformance-tester-sa
           namespace: agentic-conformance-infra
 ---
-apiVersion: agentic.networking.x-k8s.io/v1alpha1
+apiVersion: agentic.networking.x-k8s.io/v1alpha2
 kind: XAccessPolicy
 metadata:
   name: xaccesspolicy-eval-allow
@@ -165,6 +165,29 @@ spec:
       name: conformance-primary
   action: Allow
   rules:
+    - name: allow-get-sum-base
+      source:
+        type: ServiceAccount
+        serviceAccount:
+          name: conformance-tester-sa
+          namespace: agentic-conformance-infra
+      authorization:
+        type: Inline
+        headers:
+          - name: Mcp-Method
+            type: RegularExpression
+            value: "^(initialize|ping|tools/list|completion/.*|logging/.*|notifications/.*)$"
+    - name: allow-get-sum-sse-close
+      source:
+        type: ServiceAccount
+        serviceAccount:
+          name: conformance-tester-sa
+          namespace: agentic-conformance-infra
+      authorization:
+        type: Inline
+        methods:
+          - GET
+          - DELETE
     - name: allow-get-sum
       source:
         type: ServiceAccount
@@ -173,12 +196,11 @@ spec:
           namespace: agentic-conformance-infra
       authorization:
         type: Inline
-        mcp:
-          mcpBaseProtocolMethodsOption: MATCH_BASE_PROTOCOL_METHODS
-          methods:
-            - name: tools/call
-              params:
-                - "get-sum"
+        headers:
+          - name: Mcp-Method
+            value: "tools/call"
+          - name: Mcp-Name
+            value: "get-sum"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
