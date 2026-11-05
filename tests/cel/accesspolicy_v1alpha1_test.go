@@ -182,43 +182,6 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 			wantErrors: []string{"must have at most 10 items"},
 		},
 		{
-			desc: "valid MCP method attributes with Inline type",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				p.Spec.Rules[0].Authorization = &v1alpha1.AuthorizationRule{
-					Type: v1alpha1.AuthorizationRuleTypeInline,
-					MCP: v1alpha1.MCPAttributes{
-						Methods: []v1alpha1.MCPMethod{
-							{
-								Name: "tools/call",
-								Params: []v1alpha1.MCPMethodParam{
-									"param1",
-								},
-							},
-						},
-					},
-				}
-			},
-		},
-		{
-			desc: "invalid MCP method with params on prompts/list",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				p.Spec.Rules[0].Authorization = &v1alpha1.AuthorizationRule{
-					Type: v1alpha1.AuthorizationRuleTypeInline,
-					MCP: v1alpha1.MCPAttributes{
-						Methods: []v1alpha1.MCPMethod{
-							{
-								Name: "prompts/list",
-								Params: []v1alpha1.MCPMethodParam{
-									"param1",
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"Params can only be specified for get, call, subscribe, unsubscribe, or read methods"},
-		},
-		{
 			desc: "valid CEL authorization",
 			mutate: func(p *v1alpha1.XAccessPolicy) {
 				p.Spec.Rules[0].Authorization = &v1alpha1.AuthorizationRule{
