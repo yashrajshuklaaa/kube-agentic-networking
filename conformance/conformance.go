@@ -38,7 +38,7 @@ import (
 	gatewayfeatures "sigs.k8s.io/gateway-api/pkg/features"
 
 	"sigs.k8s.io/kube-agentic-networking/api/v0alpha0"
-	"sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	"sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	"sigs.k8s.io/kube-agentic-networking/conformance/tests"
 	"sigs.k8s.io/kube-agentic-networking/conformance/utils/features"
 	"sigs.k8s.io/kube-agentic-networking/version"
@@ -63,7 +63,7 @@ func DefaultOptions(t *testing.T) confsuite.ConformanceOptions {
 	require.NoError(t, gatewayv1.Install(scheme), "failed to install gatewayv1 types into scheme")
 	require.NoError(t, apiextensionsv1.AddToScheme(scheme), "failed to add apiextensionsv1 types to scheme")
 	require.NoError(t, v0alpha0.AddToScheme(scheme), "failed to install v0alpha0 types into scheme")
-	require.NoError(t, v1alpha1.AddToScheme(scheme), "failed to install v1alpha1 types into scheme")
+	require.NoError(t, v1alpha2.AddToScheme(scheme), "failed to install v1alpha2 types into scheme")
 
 	clientOptions := client.Options{Scheme: scheme}
 	c, err := client.New(cfg, clientOptions)

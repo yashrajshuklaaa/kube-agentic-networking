@@ -35,10 +35,10 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	agenticv0alpha0 "sigs.k8s.io/kube-agentic-networking/api/v0alpha0"
-	agenticv1alpha1 "sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
-	agenticinformersv1alpha1 "sigs.k8s.io/kube-agentic-networking/k8s/client/informers/externalversions/api/v1alpha1"
+	agenticv1alpha2 "sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
+	agenticinformersv1alpha2 "sigs.k8s.io/kube-agentic-networking/k8s/client/informers/externalversions/api/v1alpha2"
 	"sigs.k8s.io/kube-agentic-networking/pkg/constants"
-	helpersv1alpha1 "sigs.k8s.io/kube-agentic-networking/pkg/helpers"
+	helpersv1alpha2 "sigs.k8s.io/kube-agentic-networking/pkg/helpers"
 	"sigs.k8s.io/kube-agentic-networking/pkg/translator"
 )
 
@@ -48,7 +48,7 @@ const AccessPolicyTargetRefIndex = "targetRef"
 // accessPolicyTargetRefIndexFunc indexes AccessPolicies by each XBackend targetRef (namespace/name).
 // Used by the informer cache to support O(1) lookup of policies targeting a given backend.
 func accessPolicyTargetRefIndexFunc(obj interface{}) ([]string, error) {
-	policy, ok := obj.(*agenticv1alpha1.XAccessPolicy)
+	policy, ok := obj.(*agenticv1alpha2.XAccessPolicy)
 	if !ok {
 		return nil, nil
 	}
@@ -62,7 +62,7 @@ func accessPolicyTargetRefIndexFunc(obj interface{}) ([]string, error) {
 	return keys, nil
 }
 
-func (c *Controller) setupAccessPolicyEventHandlers(accessPolicyInformer agenticinformersv1alpha1.XAccessPolicyInformer) error {
+func (c *Controller) setupAccessPolicyEventHandlers(accessPolicyInformer agenticinformersv1alpha2.XAccessPolicyInformer) error {
 	_, err := accessPolicyInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.onAccessPolicyAdd,
 		UpdateFunc: c.onAccessPolicyUpdate,
@@ -72,7 +72,7 @@ func (c *Controller) setupAccessPolicyEventHandlers(accessPolicyInformer agentic
 }
 
 func (c *Controller) onAccessPolicyAdd(obj interface{}) {
-	policy := obj.(*agenticv1alpha1.XAccessPolicy)
+	policy := obj.(*agenticv1alpha2.XAccessPolicy)
 	klog.V(4).InfoS("Adding AccessPolicy", "accesspolicy", klog.KObj(policy))
 
 	// Initial check for policy limit per target.
@@ -89,8 +89,8 @@ func (c *Controller) onAccessPolicyAdd(obj interface{}) {
 }
 
 func (c *Controller) onAccessPolicyUpdate(old, newObj interface{}) {
-	oldPolicy := old.(*agenticv1alpha1.XAccessPolicy)
-	newPolicy := newObj.(*agenticv1alpha1.XAccessPolicy)
+	oldPolicy := old.(*agenticv1alpha2.XAccessPolicy)
+	newPolicy := newObj.(*agenticv1alpha2.XAccessPolicy)
 
 	if hasAccessPolicyChanged(oldPolicy, newPolicy) {
 		klog.V(4).InfoS("Updating AccessPolicy", "accesspolicy", klog.KObj(oldPolicy))
@@ -112,14 +112,14 @@ func (c *Controller) onAccessPolicyUpdate(old, newObj interface{}) {
 }
 
 func (c *Controller) onAccessPolicyDelete(obj interface{}) {
-	policy, ok := obj.(*agenticv1alpha1.XAccessPolicy)
+	policy, ok := obj.(*agenticv1alpha2.XAccessPolicy)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		policy, ok = tombstone.Obj.(*agenticv1alpha1.XAccessPolicy)
+		policy, ok = tombstone.Obj.(*agenticv1alpha2.XAccessPolicy)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a AccessPolicy %#v", obj))
 			return
@@ -136,8 +136,8 @@ func (c *Controller) onAccessPolicyDelete(obj interface{}) {
 // enqueueGatewaysForAccessPolicy enqueues all Gateways that are affected by the given AccessPolicy.
 // It also enqueues the targeted XBackend for finalizer reconciliation.
 // When an AccessPolicy targets a Gateway, that Gateway is enqueued so its finalizer can be re-evaluated on AccessPolicy delete (avoids deadlock).
-func (c *Controller) enqueueGatewaysForAccessPolicy(policy *agenticv1alpha1.XAccessPolicy) {
-	isAccepted := helpersv1alpha1.IsXAccessPolicyAccepted(policy)
+func (c *Controller) enqueueGatewaysForAccessPolicy(policy *agenticv1alpha2.XAccessPolicy) {
+	isAccepted := helpersv1alpha2.IsXAccessPolicyAccepted(policy)
 	isDeleting := policy.DeletionTimestamp != nil
 	shouldEnqueueGW := isAccepted || isDeleting
 
@@ -190,17 +190,17 @@ func isGatewayTargetRef(targetRef gwapiv1.LocalPolicyTargetReferenceWithSectionN
 	return targetRef.Group == gwapiv1.GroupName && targetRef.Kind == "Gateway"
 }
 
-func hasAccessPolicyChanged(oldPolicy, newPolicy *agenticv1alpha1.XAccessPolicy) bool {
+func hasAccessPolicyChanged(oldPolicy, newPolicy *agenticv1alpha2.XAccessPolicy) bool {
 	specChanged := newPolicy.Generation != oldPolicy.Generation || !reflect.DeepEqual(newPolicy.Annotations, oldPolicy.Annotations)
 	deletionTimestampChanged := newPolicy.DeletionTimestamp != oldPolicy.DeletionTimestamp
-	acceptanceChanged := helpersv1alpha1.IsXAccessPolicyAccepted(newPolicy) != helpersv1alpha1.IsXAccessPolicyAccepted(oldPolicy)
+	acceptanceChanged := helpersv1alpha2.IsXAccessPolicyAccepted(newPolicy) != helpersv1alpha2.IsXAccessPolicyAccepted(oldPolicy)
 
 	return specChanged || deletionTimestampChanged || acceptanceChanged
 }
 
 // isMoreSenior returns true if p1 is "more senior" (established earlier) than p2.
 // Seniority is determined by CreationTimestamp, with Name as a deterministic tie-breaker.
-func isMoreSenior(p1, p2 *agenticv1alpha1.XAccessPolicy) bool {
+func isMoreSenior(p1, p2 *agenticv1alpha2.XAccessPolicy) bool {
 	if !p1.CreationTimestamp.Equal(&p2.CreationTimestamp) {
 		return p1.CreationTimestamp.Before(&p2.CreationTimestamp)
 	}
@@ -210,7 +210,7 @@ func isMoreSenior(p1, p2 *agenticv1alpha1.XAccessPolicy) bool {
 // isPolicyUnderTargetLimit determines if the policy is within the maximum allowed policies per target.
 // It returns true if accepted for ALL targets, false otherwise.
 // It also updates the policy status accordingly.
-func (c *Controller) isPolicyUnderTargetLimit(ctx context.Context, policy *agenticv1alpha1.XAccessPolicy) bool {
+func (c *Controller) isPolicyUnderTargetLimit(ctx context.Context, policy *agenticv1alpha2.XAccessPolicy) bool {
 	// TODO: Index AccessPolicies by their target refs for more efficient lookups.
 	// https://github.com/kubernetes-sigs/kube-agentic-networking/issues/168
 	allPolicies, err := c.agentic.accessPolicyLister.XAccessPolicies(policy.Namespace).List(labels.Everything())
@@ -220,7 +220,7 @@ func (c *Controller) isPolicyUnderTargetLimit(ctx context.Context, policy *agent
 	}
 
 	// 1. Group all policies by their target resource.
-	targetToPolicies := make(map[string][]*agenticv1alpha1.XAccessPolicy)
+	targetToPolicies := make(map[string][]*agenticv1alpha2.XAccessPolicy)
 	for _, p := range allPolicies {
 		for _, ref := range p.Spec.TargetRefs {
 			id := getTargetID(ref)
@@ -243,13 +243,13 @@ func (c *Controller) isPolicyUnderTargetLimit(ctx context.Context, policy *agent
 			break
 		}
 
-		if policy.Spec.Action == agenticv1alpha1.ActionTypeExternalAuth {
+		if policy.Spec.Action == agenticv1alpha2.ActionTypeExternalAuth {
 			hasSeniorExtAuth := false
 			for _, p := range policies {
 				if p.Name == policy.Name {
 					continue
 				}
-				if p.Spec.Action == agenticv1alpha1.ActionTypeExternalAuth && isMoreSenior(p, policy) {
+				if p.Spec.Action == agenticv1alpha2.ActionTypeExternalAuth && isMoreSenior(p, policy) {
 					hasSeniorExtAuth = true
 					break
 				}
@@ -265,11 +265,11 @@ func (c *Controller) isPolicyUnderTargetLimit(ctx context.Context, policy *agent
 
 	// 3. Update status for all targets based on the overall result.
 	for _, targetRef := range policy.Spec.TargetRefs {
-		reason := agenticv1alpha1.PolicyReasonAccepted
+		reason := agenticv1alpha2.PolicyReasonAccepted
 		message := "AccessPolicy accepted for target"
 
 		if !shouldAccept {
-			reason = agenticv1alpha1.PolicyLimitPerTargetExceeded
+			reason = agenticv1alpha2.PolicyLimitPerTargetExceeded
 			message = failureMessage
 		}
 
@@ -283,7 +283,7 @@ func (c *Controller) isPolicyUnderTargetLimit(ctx context.Context, policy *agent
 
 // seniorPoliciesAtLimit returns true if the number of policies with higher seniority
 // targeting the same resource has already reached the configured maximum limit.
-func (c *Controller) seniorPoliciesAtLimit(policy *agenticv1alpha1.XAccessPolicy, allPoliciesForTarget []*agenticv1alpha1.XAccessPolicy) bool {
+func (c *Controller) seniorPoliciesAtLimit(policy *agenticv1alpha2.XAccessPolicy, allPoliciesForTarget []*agenticv1alpha2.XAccessPolicy) bool {
 	if len(allPoliciesForTarget) <= constants.MaxAccessPoliciesPerTarget {
 		return false
 	}
@@ -308,7 +308,7 @@ func getTargetID(ref gwapiv1.LocalPolicyTargetReferenceWithSectionName) string {
 	return fmt.Sprintf("%s/%s/%s", ref.Group, ref.Kind, ref.Name)
 }
 
-func (c *Controller) updateAccessPolicyStatus(ctx context.Context, policy *agenticv1alpha1.XAccessPolicy, targetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName, accepted bool, reason gwapiv1.PolicyConditionReason, message string) error {
+func (c *Controller) updateAccessPolicyStatus(ctx context.Context, policy *agenticv1alpha2.XAccessPolicy, targetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName, accepted bool, reason gwapiv1.PolicyConditionReason, message string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		fresh, err := c.agentic.accessPolicyLister.XAccessPolicies(policy.Namespace).Get(policy.Name)
 		if err != nil {
@@ -322,7 +322,7 @@ func (c *Controller) updateAccessPolicyStatus(ctx context.Context, policy *agent
 		}
 
 		newCondition := metav1.Condition{
-			Type:               string(agenticv1alpha1.PolicyConditionAccepted),
+			Type:               string(agenticv1alpha2.PolicyConditionAccepted),
 			Status:             status,
 			Reason:             string(reason),
 			Message:            message,
@@ -358,7 +358,7 @@ func (c *Controller) updateAccessPolicyStatus(ctx context.Context, policy *agent
 			return nil
 		}
 
-		_, err = c.agentic.client.AgenticV1alpha1().XAccessPolicies(policy.Namespace).UpdateStatus(ctx, policyCopy, metav1.UpdateOptions{})
+		_, err = c.agentic.client.AgenticV1alpha2().XAccessPolicies(policy.Namespace).UpdateStatus(ctx, policyCopy, metav1.UpdateOptions{})
 		return err
 	})
 }
@@ -366,13 +366,13 @@ func (c *Controller) updateAccessPolicyStatus(ctx context.Context, policy *agent
 // validateCELSpec validates that all CEL expressions in the policy are syntactically valid.
 // It returns true if all expressions are valid, false otherwise.
 // It also updates the policy status accordingly.
-func (c *Controller) validateCELSpec(ctx context.Context, policy *agenticv1alpha1.XAccessPolicy) bool {
+func (c *Controller) validateCELSpec(ctx context.Context, policy *agenticv1alpha2.XAccessPolicy) bool {
 	if policy.Spec.Rules == nil {
 		return true
 	}
 
 	for _, rule := range policy.Spec.Rules {
-		if rule.Authorization != nil && rule.Authorization.Type == agenticv1alpha1.AuthorizationRuleTypeCEL && rule.Authorization.CEL != nil {
+		if rule.Authorization != nil && rule.Authorization.Type == agenticv1alpha2.AuthorizationRuleTypeCEL && rule.Authorization.CEL != nil {
 			if _, err := translator.CompileCelExpression(rule.Authorization.CEL.Expression); err != nil {
 				msg := fmt.Sprintf("Failed to compile CEL expression %q: %v", rule.Authorization.CEL.Expression, err)
 				c.rejectPolicyForAllTargets(ctx, policy, msg)
@@ -384,9 +384,9 @@ func (c *Controller) validateCELSpec(ctx context.Context, policy *agenticv1alpha
 	return true
 }
 
-func (c *Controller) rejectPolicyForAllTargets(ctx context.Context, policy *agenticv1alpha1.XAccessPolicy, message string) {
+func (c *Controller) rejectPolicyForAllTargets(ctx context.Context, policy *agenticv1alpha2.XAccessPolicy, message string) {
 	for _, targetRef := range policy.Spec.TargetRefs {
-		if err := c.updateAccessPolicyStatus(ctx, policy, targetRef, false, agenticv1alpha1.PolicyReasonInvalidCEL, message); err != nil {
+		if err := c.updateAccessPolicyStatus(ctx, policy, targetRef, false, agenticv1alpha2.PolicyReasonInvalidCEL, message); err != nil {
 			runtime.HandleError(fmt.Errorf("failed to update AccessPolicy status: %w", err))
 		}
 	}

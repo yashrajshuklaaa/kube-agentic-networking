@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	"sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	"sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	localfeatures "sigs.k8s.io/kube-agentic-networking/conformance/utils/features"
 	"sigs.k8s.io/kube-agentic-networking/pkg/helpers"
 )
@@ -42,7 +42,7 @@ var XAccessPolicyExtAuthAccepted = suite.ConformanceTest{
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 
-		policy := &v1alpha1.XAccessPolicy{}
+		policy := &v1alpha2.XAccessPolicy{}
 		policyName := types.NamespacedName{Name: "xaccesspolicy-extauth-accepted", Namespace: "agentic-conformance-infra"}
 
 		t.Logf("Waiting for XAccessPolicy %s to be accepted", policyName)

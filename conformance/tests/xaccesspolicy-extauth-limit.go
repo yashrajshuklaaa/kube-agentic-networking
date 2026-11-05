@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	"sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	"sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	localfeatures "sigs.k8s.io/kube-agentic-networking/conformance/utils/features"
 	"sigs.k8s.io/kube-agentic-networking/pkg/helpers"
 )
@@ -49,7 +49,7 @@ var XAccessPolicyExtAuthLimit = suite.ConformanceTest{
 
 		// 1. Verify policy 1 (senior) is accepted
 		t.Logf("Waiting for senior XAccessPolicy %s to be accepted", policy1Name)
-		policy1 := &v1alpha1.XAccessPolicy{}
+		policy1 := &v1alpha2.XAccessPolicy{}
 		err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(ctx context.Context) (bool, error) {
 			getErr := suite.Client.Get(ctx, policy1Name, policy1)
 			if getErr != nil {
@@ -62,7 +62,7 @@ var XAccessPolicyExtAuthLimit = suite.ConformanceTest{
 
 		// 2. Verify policy 2 (junior) is rejected with LimitPerTargetExceeded
 		t.Logf("Waiting for junior XAccessPolicy %s to be rejected with LimitPerTargetExceeded", policy2Name)
-		policy2 := &v1alpha1.XAccessPolicy{}
+		policy2 := &v1alpha2.XAccessPolicy{}
 		err = wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(ctx context.Context) (bool, error) {
 			getErr := suite.Client.Get(ctx, policy2Name, policy2)
 			if getErr != nil {
@@ -71,7 +71,7 @@ var XAccessPolicyExtAuthLimit = suite.ConformanceTest{
 			}
 
 			// We check if it has Accepted=False with reason LimitPerTargetExceeded
-			rejected := hasCondition(policy2, string(v1alpha1.PolicyConditionAccepted), metav1.ConditionFalse, string(v1alpha1.PolicyLimitPerTargetExceeded))
+			rejected := hasCondition(policy2, string(v1alpha2.PolicyConditionAccepted), metav1.ConditionFalse, string(v1alpha2.PolicyLimitPerTargetExceeded))
 			t.Logf("XAccessPolicy %s rejected status: %v", policy2Name.Name, rejected)
 			return rejected, nil
 		})
@@ -79,7 +79,7 @@ var XAccessPolicyExtAuthLimit = suite.ConformanceTest{
 	},
 }
 
-func hasCondition(policy *v1alpha1.XAccessPolicy, condType string, status metav1.ConditionStatus, reason string) bool {
+func hasCondition(policy *v1alpha2.XAccessPolicy, condType string, status metav1.ConditionStatus, reason string) bool {
 	for _, ancestor := range policy.Status.Ancestors {
 		cond := meta.FindStatusCondition(ancestor.Conditions, condType)
 		if cond != nil && cond.Status == status && cond.Reason == reason {

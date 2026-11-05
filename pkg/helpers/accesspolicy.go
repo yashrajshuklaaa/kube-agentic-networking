@@ -19,18 +19,18 @@ package helpers
 import (
 	"k8s.io/apimachinery/pkg/api/meta"
 
-	v1alpha1 "sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	v1alpha2 "sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 )
 
 // IsXAccessPolicyAccepted returns true if the policy has been explicitly accepted for all its targets.
 // A policy is considered accepted only if it has at least one ancestor status populated
 // and ALL ancestors have the 'Accepted' condition set to 'True'.
-func IsXAccessPolicyAccepted(p *v1alpha1.XAccessPolicy) bool {
+func IsXAccessPolicyAccepted(p *v1alpha2.XAccessPolicy) bool {
 	if len(p.Status.Ancestors) == 0 {
 		return false
 	}
 	for _, ancestor := range p.Status.Ancestors {
-		if !meta.IsStatusConditionTrue(ancestor.Conditions, string(v1alpha1.PolicyConditionAccepted)) {
+		if !meta.IsStatusConditionTrue(ancestor.Conditions, string(v1alpha2.PolicyConditionAccepted)) {
 			return false
 		}
 	}

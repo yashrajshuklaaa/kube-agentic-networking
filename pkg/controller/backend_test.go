@@ -27,8 +27,8 @@ import (
 	gatewaylisters "sigs.k8s.io/gateway-api/pkg/client/listers/apis/v1"
 
 	agenticv0alpha0 "sigs.k8s.io/kube-agentic-networking/api/v0alpha0"
-	agenticv1alpha1 "sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
-	agenticlistersv1alpha1 "sigs.k8s.io/kube-agentic-networking/k8s/client/listers/api/v1alpha1"
+	agenticv1alpha2 "sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
+	agenticlistersv1alpha2 "sigs.k8s.io/kube-agentic-networking/k8s/client/listers/api/v1alpha2"
 )
 
 func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
@@ -42,7 +42,7 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 		})
 		c := &Controller{
 			agentic: agenticNetResources{
-				accessPolicyLister:  agenticlistersv1alpha1.NewXAccessPolicyLister(indexer),
+				accessPolicyLister:  agenticlistersv1alpha2.NewXAccessPolicyLister(indexer),
 				accessPolicyIndexer: indexer,
 			},
 		}
@@ -59,9 +59,9 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 			cache.NamespaceIndex:       cache.MetaNamespaceIndexFunc,
 			AccessPolicyTargetRefIndex: accessPolicyTargetRefIndexFunc,
 		})
-		policy := &agenticv1alpha1.XAccessPolicy{
+		policy := &agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{
 					{
 						LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
@@ -71,7 +71,7 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 						},
 					},
 				},
-				Rules: []agenticv1alpha1.AccessRule{{Name: "rule1"}},
+				Rules: []agenticv1alpha2.AccessRule{{Name: "rule1"}},
 			},
 		}
 		if err := indexer.Add(policy); err != nil {
@@ -79,7 +79,7 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 		}
 		c := &Controller{
 			agentic: agenticNetResources{
-				accessPolicyLister:  agenticlistersv1alpha1.NewXAccessPolicyLister(indexer),
+				accessPolicyLister:  agenticlistersv1alpha2.NewXAccessPolicyLister(indexer),
 				accessPolicyIndexer: indexer,
 			},
 		}
@@ -96,9 +96,9 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 			cache.NamespaceIndex:       cache.MetaNamespaceIndexFunc,
 			AccessPolicyTargetRefIndex: accessPolicyTargetRefIndexFunc,
 		})
-		policy := &agenticv1alpha1.XAccessPolicy{
+		policy := &agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{
 					{
 						LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
@@ -108,7 +108,7 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 						},
 					},
 				},
-				Rules: []agenticv1alpha1.AccessRule{{Name: "rule1"}},
+				Rules: []agenticv1alpha2.AccessRule{{Name: "rule1"}},
 			},
 		}
 		if err := indexer.Add(policy); err != nil {
@@ -116,7 +116,7 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 		}
 		c := &Controller{
 			agentic: agenticNetResources{
-				accessPolicyLister:  agenticlistersv1alpha1.NewXAccessPolicyLister(indexer),
+				accessPolicyLister:  agenticlistersv1alpha2.NewXAccessPolicyLister(indexer),
 				accessPolicyIndexer: indexer,
 			},
 		}
@@ -133,9 +133,9 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 			cache.NamespaceIndex:       cache.MetaNamespaceIndexFunc,
 			AccessPolicyTargetRefIndex: accessPolicyTargetRefIndexFunc,
 		})
-		policy := &agenticv1alpha1.XAccessPolicy{
+		policy := &agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{
 					{
 						LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
@@ -145,7 +145,7 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 						},
 					},
 				},
-				Rules: []agenticv1alpha1.AccessRule{{Name: "rule1"}},
+				Rules: []agenticv1alpha2.AccessRule{{Name: "rule1"}},
 			},
 		}
 		if err := indexer.Add(policy); err != nil {
@@ -153,7 +153,7 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 		}
 		c := &Controller{
 			agentic: agenticNetResources{
-				accessPolicyLister:  agenticlistersv1alpha1.NewXAccessPolicyLister(indexer),
+				accessPolicyLister:  agenticlistersv1alpha2.NewXAccessPolicyLister(indexer),
 				accessPolicyIndexer: indexer,
 			},
 		}
@@ -170,9 +170,9 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 			cache.NamespaceIndex:       cache.MetaNamespaceIndexFunc,
 			AccessPolicyTargetRefIndex: accessPolicyTargetRefIndexFunc,
 		})
-		policy := &agenticv1alpha1.XAccessPolicy{
+		policy := &agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "policy-1"},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{
 					{
 						LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
@@ -189,7 +189,7 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 						},
 					},
 				},
-				Rules: []agenticv1alpha1.AccessRule{{Name: "rule1"}},
+				Rules: []agenticv1alpha2.AccessRule{{Name: "rule1"}},
 			},
 		}
 		if err := indexer.Add(policy); err != nil {
@@ -197,7 +197,7 @@ func TestHasAccessPoliciesTargetingBackend(t *testing.T) {
 		}
 		c := &Controller{
 			agentic: agenticNetResources{
-				accessPolicyLister:  agenticlistersv1alpha1.NewXAccessPolicyLister(indexer),
+				accessPolicyLister:  agenticlistersv1alpha2.NewXAccessPolicyLister(indexer),
 				accessPolicyIndexer: indexer,
 			},
 		}

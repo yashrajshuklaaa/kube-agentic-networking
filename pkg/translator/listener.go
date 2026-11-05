@@ -48,7 +48,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	v0alpha0 "sigs.k8s.io/kube-agentic-networking/api/v0alpha0"
-	v1alpha1 "sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	v1alpha2 "sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	"sigs.k8s.io/kube-agentic-networking/pkg/constants"
 )
 
@@ -640,9 +640,9 @@ func (t *Translator) buildExtAuthzFilters(gateway *gatewayv1.Gateway) ([]*hcm.Ht
 
 		// findAccessPoliciesForTarget returns sorted policies (oldest first).
 		// We only keep the oldest ExternalAuth policy.
-		var extAuthPolicy *v1alpha1.XAccessPolicy
+		var extAuthPolicy *v1alpha2.XAccessPolicy
 		for _, ap := range policies {
-			if ap.Spec.Action == v1alpha1.ActionTypeExternalAuth && ap.Spec.ExternalAuth != nil {
+			if ap.Spec.Action == v1alpha2.ActionTypeExternalAuth && ap.Spec.ExternalAuth != nil {
 				extAuthPolicy = ap
 				break // Found the oldest one, stop.
 			}

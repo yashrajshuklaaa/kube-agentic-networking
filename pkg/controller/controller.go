@@ -53,9 +53,9 @@ import (
 
 	agenticclient "sigs.k8s.io/kube-agentic-networking/k8s/client/clientset/versioned"
 	agenticinformers "sigs.k8s.io/kube-agentic-networking/k8s/client/informers/externalversions/api/v0alpha0"
-	agenticinformersv1alpha1 "sigs.k8s.io/kube-agentic-networking/k8s/client/informers/externalversions/api/v1alpha1"
+	agenticinformersv1alpha2 "sigs.k8s.io/kube-agentic-networking/k8s/client/informers/externalversions/api/v1alpha2"
 	agenticlisters "sigs.k8s.io/kube-agentic-networking/k8s/client/listers/api/v0alpha0"
-	agenticlistersv1alpha1 "sigs.k8s.io/kube-agentic-networking/k8s/client/listers/api/v1alpha1"
+	agenticlistersv1alpha2 "sigs.k8s.io/kube-agentic-networking/k8s/client/listers/api/v1alpha2"
 	"sigs.k8s.io/kube-agentic-networking/pkg/constants"
 	"sigs.k8s.io/kube-agentic-networking/pkg/infra/envoy"
 	"sigs.k8s.io/kube-agentic-networking/pkg/infra/xds"
@@ -111,7 +111,7 @@ type agenticNetResources struct {
 	backendLister agenticlisters.XBackendLister
 	backendSynced cache.InformerSynced
 
-	accessPolicyLister  agenticlistersv1alpha1.XAccessPolicyLister
+	accessPolicyLister  agenticlistersv1alpha2.XAccessPolicyLister
 	accessPolicyIndexer cache.Indexer
 	accessPolicySynced  cache.InformerSynced
 }
@@ -150,7 +150,7 @@ func New(
 	httprouteInformer gatewayinformers.HTTPRouteInformer,
 	referenceGrantInformer gatewayinformersv1beta1.ReferenceGrantInformer,
 	backendInformer agenticinformers.XBackendInformer,
-	accessPolicyInformer agenticinformersv1alpha1.XAccessPolicyInformer,
+	accessPolicyInformer agenticinformersv1alpha2.XAccessPolicyInformer,
 ) (*Controller, error) {
 	apInformer := accessPolicyInformer.Informer()
 	if err := apInformer.AddIndexers(cache.Indexers{AccessPolicyTargetRefIndex: accessPolicyTargetRefIndexFunc}); err != nil {

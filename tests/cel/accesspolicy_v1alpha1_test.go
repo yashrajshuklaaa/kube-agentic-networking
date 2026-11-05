@@ -27,17 +27,17 @@ import (
 
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	"sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 )
 
 func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 	ctx := context.Background()
-	basePolicy := v1alpha1.XAccessPolicy{
+	basePolicy := v1alpha2.XAccessPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo-v1alpha1",
 			Namespace: metav1.NamespaceDefault,
 		},
-		Spec: v1alpha1.AccessPolicySpec{
+		Spec: v1alpha2.AccessPolicySpec{
 			TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
 					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
@@ -47,13 +47,13 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 					},
 				},
 			},
-			Action: v1alpha1.ActionTypeAllow,
-			Rules: []v1alpha1.AccessRule{
+			Action: v1alpha2.ActionTypeAllow,
+			Rules: []v1alpha2.AccessRule{
 				{
 					Name: "rule-1",
-					Source: v1alpha1.AccessRuleSource{
-						Type: v1alpha1.AuthorizationSourceTypeServiceAccount,
-						ServiceAccount: &v1alpha1.AuthorizationSourceServiceAccount{
+					Source: v1alpha2.AccessRuleSource{
+						Type: v1alpha2.AuthorizationSourceTypeServiceAccount,
+						ServiceAccount: &v1alpha2.AuthorizationSourceServiceAccount{
 							Name: "sa-1",
 						},
 					},
@@ -64,17 +64,17 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 
 	testCases := []struct {
 		desc       string
-		mutate     func(p *v1alpha1.XAccessPolicy)
+		mutate     func(p *v1alpha2.XAccessPolicy)
 		wantErrors []string
 	}{
 		{
 			desc: "valid policy with Allow action",
-			mutate: func(_ *v1alpha1.XAccessPolicy) {
+			mutate: func(_ *v1alpha2.XAccessPolicy) {
 			},
 		},
 		{
 			desc: "heterogeneous target kinds",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
+			mutate: func(p *v1alpha2.XAccessPolicy) {
 				p.Spec.TargetRefs = append(p.Spec.TargetRefs, gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "agentic.networking.x-k8s.io",
@@ -87,8 +87,8 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 		},
 		{
 			desc: "valid policy with ExternalAuth action",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				p.Spec.Action = v1alpha1.ActionTypeExternalAuth
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				p.Spec.Action = v1alpha2.ActionTypeExternalAuth
 				p.Spec.ExternalAuth = &gwapiv1.HTTPExternalAuthFilter{
 					ExternalAuthProtocol: gwapiv1.HTTPRouteExternalAuthGRPCProtocol,
 					BackendRef: gwapiv1.BackendObjectReference{
@@ -101,19 +101,19 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 		},
 		{
 			desc: "missing externalAuth when Action is ExternalAuth",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				p.Spec.Action = v1alpha1.ActionTypeExternalAuth
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				p.Spec.Action = v1alpha2.ActionTypeExternalAuth
 			},
 			wantErrors: []string{"externalAuth must be specified when action is set to 'ExternalAuth'"},
 		},
 		{
 			desc: "duplicate rule names",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				p.Spec.Rules = append(p.Spec.Rules, v1alpha1.AccessRule{
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				p.Spec.Rules = append(p.Spec.Rules, v1alpha2.AccessRule{
 					Name: "rule-1",
-					Source: v1alpha1.AccessRuleSource{
-						Type: v1alpha1.AuthorizationSourceTypeServiceAccount,
-						ServiceAccount: &v1alpha1.AuthorizationSourceServiceAccount{
+					Source: v1alpha2.AccessRuleSource{
+						Type: v1alpha2.AuthorizationSourceTypeServiceAccount,
+						ServiceAccount: &v1alpha2.AuthorizationSourceServiceAccount{
 							Name: "sa-2",
 						},
 					},
@@ -123,10 +123,10 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 		},
 		{
 			desc: "invalid SPIFFE ID pattern",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				spiffe := v1alpha1.AuthorizationSourceSPIFFE("not-a-spiffe-id")
-				p.Spec.Rules[0].Source = v1alpha1.AccessRuleSource{
-					Type:   v1alpha1.AuthorizationSourceTypeSPIFFE,
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				spiffe := v1alpha2.AuthorizationSourceSPIFFE("not-a-spiffe-id")
+				p.Spec.Rules[0].Source = v1alpha2.AccessRuleSource{
+					Type:   v1alpha2.AuthorizationSourceTypeSPIFFE,
 					SPIFFE: &spiffe,
 				}
 			},
@@ -134,24 +134,24 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 		},
 		{
 			desc: "valid SPIFFE ID",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				spiffe := v1alpha1.AuthorizationSourceSPIFFE("spiffe://trust.domain/workload")
-				p.Spec.Rules[0].Source = v1alpha1.AccessRuleSource{
-					Type:   v1alpha1.AuthorizationSourceTypeSPIFFE,
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				spiffe := v1alpha2.AuthorizationSourceSPIFFE("spiffe://trust.domain/workload")
+				p.Spec.Rules[0].Source = v1alpha2.AccessRuleSource{
+					Type:   v1alpha2.AuthorizationSourceTypeSPIFFE,
 					SPIFFE: &spiffe,
 				}
 			},
 		},
 		{
 			desc: "rule name too long",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
+			mutate: func(p *v1alpha2.XAccessPolicy) {
 				p.Spec.Rules[0].Name = strings.Repeat("a", 64)
 			},
 			wantErrors: []string{"may not be more than 63 bytes"},
 		},
 		{
 			desc: "too many targets",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
+			mutate: func(p *v1alpha2.XAccessPolicy) {
 				for i := 0; i < 10; i++ {
 					p.Spec.TargetRefs = append(p.Spec.TargetRefs, gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
@@ -166,13 +166,13 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 		},
 		{
 			desc: "too many rules",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
+			mutate: func(p *v1alpha2.XAccessPolicy) {
 				for i := 0; i < 10; i++ {
-					p.Spec.Rules = append(p.Spec.Rules, v1alpha1.AccessRule{
+					p.Spec.Rules = append(p.Spec.Rules, v1alpha2.AccessRule{
 						Name: fmt.Sprintf("rule-%d", i+2),
-						Source: v1alpha1.AccessRuleSource{
-							Type: v1alpha1.AuthorizationSourceTypeServiceAccount,
-							ServiceAccount: &v1alpha1.AuthorizationSourceServiceAccount{
+						Source: v1alpha2.AccessRuleSource{
+							Type: v1alpha2.AuthorizationSourceTypeServiceAccount,
+							ServiceAccount: &v1alpha2.AuthorizationSourceServiceAccount{
 								Name: "sa-1",
 							},
 						},
@@ -183,10 +183,10 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 		},
 		{
 			desc: "valid CEL authorization",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				p.Spec.Rules[0].Authorization = &v1alpha1.AuthorizationRule{
-					Type: v1alpha1.AuthorizationRuleTypeCEL,
-					CEL: &v1alpha1.AccessPolicyCELRule{
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				p.Spec.Rules[0].Authorization = &v1alpha2.AuthorizationRule{
+					Type: v1alpha2.AuthorizationRuleTypeCEL,
+					CEL: &v1alpha2.AccessPolicyCELRule{
 						Expression: "request.mcp.tool_name.startsWith('verify_')",
 					},
 				}
@@ -194,19 +194,19 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 		},
 		{
 			desc: "missing cel field for CEL type",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				p.Spec.Rules[0].Authorization = &v1alpha1.AuthorizationRule{
-					Type: v1alpha1.AuthorizationRuleTypeCEL,
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				p.Spec.Rules[0].Authorization = &v1alpha2.AuthorizationRule{
+					Type: v1alpha2.AuthorizationRuleTypeCEL,
 				}
 			},
 			wantErrors: []string{"cel must be specified when type is set to 'CEL'"},
 		},
 		{
 			desc: "cel specified for Inline type",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
-				p.Spec.Rules[0].Authorization = &v1alpha1.AuthorizationRule{
-					Type: v1alpha1.AuthorizationRuleTypeInline,
-					CEL: &v1alpha1.AccessPolicyCELRule{
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				p.Spec.Rules[0].Authorization = &v1alpha2.AuthorizationRule{
+					Type: v1alpha2.AuthorizationRuleTypeInline,
+					CEL: &v1alpha2.AccessPolicyCELRule{
 						Expression: "true",
 					},
 				}
@@ -215,7 +215,7 @@ func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
 		},
 		{
 			desc: "valid policy with empty rules",
-			mutate: func(p *v1alpha1.XAccessPolicy) {
+			mutate: func(p *v1alpha2.XAccessPolicy) {
 				p.Spec.Rules = nil
 			},
 		},

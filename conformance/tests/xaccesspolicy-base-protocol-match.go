@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	"sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	"sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	localfeatures "sigs.k8s.io/kube-agentic-networking/conformance/utils/features"
 	"sigs.k8s.io/kube-agentic-networking/pkg/helpers"
 )
@@ -48,7 +48,7 @@ var XAccessPolicyBaseProtocolMatch = suite.ConformanceTest{
 
 		// 1. Wait for policy to be accepted
 		t.Logf("Waiting for XAccessPolicy %s to be accepted", policyName)
-		policy := &v1alpha1.XAccessPolicy{}
+		policy := &v1alpha2.XAccessPolicy{}
 		err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(ctx context.Context) (bool, error) {
 			err := s.Client.Get(ctx, policyName, policy)
 			if err != nil {

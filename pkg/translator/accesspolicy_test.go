@@ -28,7 +28,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	agenticv0alpha0 "sigs.k8s.io/kube-agentic-networking/api/v0alpha0"
-	agenticv1alpha1 "sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	agenticv1alpha2 "sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	agenticclient "sigs.k8s.io/kube-agentic-networking/k8s/client/clientset/versioned/fake"
 	agenticinformers "sigs.k8s.io/kube-agentic-networking/k8s/client/informers/externalversions"
 	"sigs.k8s.io/kube-agentic-networking/pkg/constants"
@@ -39,12 +39,12 @@ const (
 )
 
 var (
-	acceptedStatus = agenticv1alpha1.AccessPolicyStatus{
+	acceptedStatus = agenticv1alpha2.AccessPolicyStatus{
 		Ancestors: []gatewayv1.PolicyAncestorStatus{
 			{
 				Conditions: []metav1.Condition{
 					{
-						Type:   string(agenticv1alpha1.PolicyConditionAccepted),
+						Type:   string(agenticv1alpha2.PolicyConditionAccepted),
 						Status: metav1.ConditionTrue,
 					},
 				},
@@ -52,12 +52,12 @@ var (
 		},
 	}
 
-	rejectedStatus = agenticv1alpha1.AccessPolicyStatus{
+	rejectedStatus = agenticv1alpha2.AccessPolicyStatus{
 		Ancestors: []gatewayv1.PolicyAncestorStatus{
 			{
 				Conditions: []metav1.Condition{
 					{
-						Type:   string(agenticv1alpha1.PolicyConditionAccepted),
+						Type:   string(agenticv1alpha2.PolicyConditionAccepted),
 						Status: metav1.ConditionFalse,
 					},
 				},
@@ -134,9 +134,9 @@ func TestBuildGatewayLevelRBACFilters(t *testing.T) {
 		{
 			name: "one policy targeting multiple gateways",
 			policies: []runtime.Object{
-				&agenticv1alpha1.XAccessPolicy{
+				&agenticv1alpha2.XAccessPolicy{
 					ObjectMeta: metav1.ObjectMeta{Name: "multi-gw-policy", Namespace: ns},
-					Spec: agenticv1alpha1.AccessPolicySpec{
+					Spec: agenticv1alpha2.AccessPolicySpec{
 						TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{
 							{
 								LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
@@ -153,8 +153,8 @@ func TestBuildGatewayLevelRBACFilters(t *testing.T) {
 								},
 							},
 						},
-						Action: agenticv1alpha1.ActionTypeAllow,
-						Rules:  []agenticv1alpha1.AccessRule{{Name: "rule-name"}},
+						Action: agenticv1alpha2.ActionTypeAllow,
+						Rules:  []agenticv1alpha2.AccessRule{{Name: "rule-name"}},
 					},
 					Status: acceptedStatus,
 				},
@@ -184,10 +184,10 @@ func TestBuildGatewayLevelRBACFilters(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			agenticClient := agenticclient.NewSimpleClientset(tt.policies...)
 			agenticInformerFactory := agenticinformers.NewSharedInformerFactory(agenticClient, 0)
-			lister := agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Lister()
+			lister := agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Lister()
 
 			for _, p := range tt.policies {
-				_ = agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Informer().GetIndexer().Add(p)
+				_ = agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Informer().GetIndexer().Add(p)
 			}
 
 			tr := &Translator{accessPolicyLister: lister}
@@ -306,9 +306,9 @@ func TestBuildBackendLevelRBACOverrides(t *testing.T) {
 		{
 			name: "one policy targeting multiple backends",
 			policies: []runtime.Object{
-				&agenticv1alpha1.XAccessPolicy{
+				&agenticv1alpha2.XAccessPolicy{
 					ObjectMeta: metav1.ObjectMeta{Name: "multi-be-policy", Namespace: ns},
-					Spec: agenticv1alpha1.AccessPolicySpec{
+					Spec: agenticv1alpha2.AccessPolicySpec{
 						TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{
 							{
 								LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
@@ -325,8 +325,8 @@ func TestBuildBackendLevelRBACOverrides(t *testing.T) {
 								},
 							},
 						},
-						Action: agenticv1alpha1.ActionTypeAllow,
-						Rules:  []agenticv1alpha1.AccessRule{{Name: "rule-name"}},
+						Action: agenticv1alpha2.ActionTypeAllow,
+						Rules:  []agenticv1alpha2.AccessRule{{Name: "rule-name"}},
 					},
 					Status: acceptedStatus,
 				},
@@ -356,10 +356,10 @@ func TestBuildBackendLevelRBACOverrides(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			agenticClient := agenticclient.NewSimpleClientset(tt.policies...)
 			agenticInformerFactory := agenticinformers.NewSharedInformerFactory(agenticClient, 0)
-			lister := agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Lister()
+			lister := agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Lister()
 
 			for _, p := range tt.policies {
-				_ = agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Informer().GetIndexer().Add(p)
+				_ = agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Informer().GetIndexer().Add(p)
 			}
 
 			tr := &Translator{accessPolicyLister: lister}
@@ -398,13 +398,13 @@ func TestBuildBackendLevelRBACOverrides(t *testing.T) {
 
 func TestBuildRBACConfigWithoutCommonPolicies(t *testing.T) {
 	tr := &Translator{}
-	policy := &agenticv1alpha1.XAccessPolicy{
-		Spec: agenticv1alpha1.AccessPolicySpec{
-			Rules: []agenticv1alpha1.AccessRule{
+	policy := &agenticv1alpha2.XAccessPolicy{
+		Spec: agenticv1alpha2.AccessPolicySpec{
+			Rules: []agenticv1alpha2.AccessRule{
 				{
 					Name: "custom-rule",
-					Authorization: &agenticv1alpha1.AuthorizationRule{
-						Type: agenticv1alpha1.AuthorizationRuleTypeInline,
+					Authorization: &agenticv1alpha2.AuthorizationRule{
+						Type: agenticv1alpha2.AuthorizationRuleTypeInline,
 					},
 				},
 			},
@@ -436,9 +436,9 @@ func TestFindAccessPoliciesForTarget(t *testing.T) {
 	ns := "test-ns"
 
 	policies := []runtime.Object{
-		&agenticv1alpha1.XAccessPolicy{
+		&agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: "policy-accepted", Namespace: ns},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
 					LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
 						Group: gatewayv1.Group(agenticv0alpha0.GroupName),
@@ -449,9 +449,9 @@ func TestFindAccessPoliciesForTarget(t *testing.T) {
 			},
 			Status: acceptedStatus,
 		},
-		&agenticv1alpha1.XAccessPolicy{
+		&agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: "policy-rejected", Namespace: ns},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
 					LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
 						Group: gatewayv1.Group(agenticv0alpha0.GroupName),
@@ -462,9 +462,9 @@ func TestFindAccessPoliciesForTarget(t *testing.T) {
 			},
 			Status: rejectedStatus,
 		},
-		&agenticv1alpha1.XAccessPolicy{
+		&agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: "policy-targeting-other-backend", Namespace: ns},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
 					LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
 						Group: gatewayv1.Group(agenticv0alpha0.GroupName),
@@ -479,11 +479,11 @@ func TestFindAccessPoliciesForTarget(t *testing.T) {
 
 	agenticClient := agenticclient.NewSimpleClientset(policies...)
 	agenticInformerFactory := agenticinformers.NewSharedInformerFactory(agenticClient, 0)
-	lister := agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Lister()
+	lister := agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Lister()
 
 	// Populate cache
 	for _, p := range policies {
-		_ = agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Informer().GetIndexer().Add(p)
+		_ = agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Informer().GetIndexer().Add(p)
 	}
 
 	tr := &Translator{accessPolicyLister: lister}
@@ -509,9 +509,9 @@ func TestFindAccessPoliciesForTargetSorting(t *testing.T) {
 	future := metav1.NewTime(now.Add(1 * time.Hour))
 
 	policies := []runtime.Object{
-		&agenticv1alpha1.XAccessPolicy{
+		&agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: "policy-future", Namespace: ns, CreationTimestamp: future},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
 					LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
 						Group: gatewayv1.Group(agenticv0alpha0.GroupName),
@@ -519,14 +519,14 @@ func TestFindAccessPoliciesForTargetSorting(t *testing.T) {
 						Name:  "my-backend",
 					},
 				}},
-				Action: agenticv1alpha1.ActionTypeAllow,
-				Rules:  []agenticv1alpha1.AccessRule{{Name: "rule-1"}},
+				Action: agenticv1alpha2.ActionTypeAllow,
+				Rules:  []agenticv1alpha2.AccessRule{{Name: "rule-1"}},
 			},
 			Status: acceptedStatus,
 		},
-		&agenticv1alpha1.XAccessPolicy{
+		&agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: "policy-past", Namespace: ns, CreationTimestamp: past},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
 					LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
 						Group: gatewayv1.Group(agenticv0alpha0.GroupName),
@@ -534,14 +534,14 @@ func TestFindAccessPoliciesForTargetSorting(t *testing.T) {
 						Name:  "my-backend",
 					},
 				}},
-				Action: agenticv1alpha1.ActionTypeAllow,
-				Rules:  []agenticv1alpha1.AccessRule{{Name: "rule-1"}},
+				Action: agenticv1alpha2.ActionTypeAllow,
+				Rules:  []agenticv1alpha2.AccessRule{{Name: "rule-1"}},
 			},
 			Status: acceptedStatus,
 		},
-		&agenticv1alpha1.XAccessPolicy{
+		&agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: "policy-now", Namespace: ns, CreationTimestamp: now},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
 					LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
 						Group: gatewayv1.Group(agenticv0alpha0.GroupName),
@@ -549,8 +549,8 @@ func TestFindAccessPoliciesForTargetSorting(t *testing.T) {
 						Name:  "my-backend",
 					},
 				}},
-				Action: agenticv1alpha1.ActionTypeAllow,
-				Rules:  []agenticv1alpha1.AccessRule{{Name: "rule-1"}},
+				Action: agenticv1alpha2.ActionTypeAllow,
+				Rules:  []agenticv1alpha2.AccessRule{{Name: "rule-1"}},
 			},
 			Status: acceptedStatus,
 		},
@@ -558,10 +558,10 @@ func TestFindAccessPoliciesForTargetSorting(t *testing.T) {
 
 	agenticClient := agenticclient.NewSimpleClientset(policies...)
 	agenticInformerFactory := agenticinformers.NewSharedInformerFactory(agenticClient, 0)
-	lister := agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Lister()
+	lister := agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Lister()
 
 	for _, p := range policies {
-		_ = agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Informer().GetIndexer().Add(p)
+		_ = agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Informer().GetIndexer().Add(p)
 	}
 
 	tr := &Translator{accessPolicyLister: lister}
@@ -619,18 +619,18 @@ func TestConvertSAtoSPIFFEID(t *testing.T) {
 func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 	tests := []struct {
 		name                   string
-		accessPolicy           *agenticv1alpha1.XAccessPolicy
+		accessPolicy           *agenticv1alpha2.XAccessPolicy
 		expectedRules          map[string]expectedRule // rule name -> expected results in Rules
 		expectedShadowRules    map[string]expectedRule // rule name -> expected results in ShadowRules
 		expectShadowStatPrefix bool
 	}{
 		{
 			name: "one rule with tools",
-			accessPolicy: func() *agenticv1alpha1.XAccessPolicy {
+			accessPolicy: func() *agenticv1alpha2.XAccessPolicy {
 				p := newTestAccessPolicy("policy-1", "default", "dummy", "Gateway", "spiffe://example.com/ns/default/sa/caller")
-				p.Spec.Rules[0].Authorization = &agenticv1alpha1.AuthorizationRule{
-					Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
-					Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-tool", Value: "tool-1"}},
+				p.Spec.Rules[0].Authorization = &agenticv1alpha2.AuthorizationRule{
+					Type:    agenticv1alpha2.AuthorizationRuleTypeInline,
+					Headers: []agenticv1alpha2.HTTPHeaderMatch{{Name: "x-tool", Value: "tool-1"}},
 				}
 				return p
 			}(),
@@ -649,10 +649,10 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 		},
 		{
 			name: "one rule with empty tools",
-			accessPolicy: func() *agenticv1alpha1.XAccessPolicy {
+			accessPolicy: func() *agenticv1alpha2.XAccessPolicy {
 				p := newTestAccessPolicy("policy-2", "default", "dummy", "Gateway", "spiffe://example.com/ns/default/sa/caller")
-				p.Spec.Rules[0].Authorization = &agenticv1alpha1.AuthorizationRule{
-					Type: agenticv1alpha1.AuthorizationRuleTypeInline,
+				p.Spec.Rules[0].Authorization = &agenticv1alpha2.AuthorizationRule{
+					Type: agenticv1alpha2.AuthorizationRuleTypeInline,
 				}
 				return p
 			}(),
@@ -691,36 +691,36 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 		},
 		{
 			name: "multi rule with tools",
-			accessPolicy: &agenticv1alpha1.XAccessPolicy{
+			accessPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-1", Name: "policy-4"},
-				Spec: agenticv1alpha1.AccessPolicySpec{
-					Rules: []agenticv1alpha1.AccessRule{
+				Spec: agenticv1alpha2.AccessPolicySpec{
+					Rules: []agenticv1alpha2.AccessRule{
 						{
 							Name: "rule-1",
-							Source: agenticv1alpha1.AccessRuleSource{
-								Type: agenticv1alpha1.AuthorizationSourceTypeServiceAccount,
-								ServiceAccount: &agenticv1alpha1.AuthorizationSourceServiceAccount{
+							Source: agenticv1alpha2.AccessRuleSource{
+								Type: agenticv1alpha2.AuthorizationSourceTypeServiceAccount,
+								ServiceAccount: &agenticv1alpha2.AuthorizationSourceServiceAccount{
 									Name:      "my-sa",
 									Namespace: "my-ns",
 								},
 							},
-							Authorization: &agenticv1alpha1.AuthorizationRule{
-								Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
-								Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-tool", Value: "tool-a"}},
+							Authorization: &agenticv1alpha2.AuthorizationRule{
+								Type:    agenticv1alpha2.AuthorizationRuleTypeInline,
+								Headers: []agenticv1alpha2.HTTPHeaderMatch{{Name: "x-tool", Value: "tool-a"}},
 							},
 						},
 						{
 							Name: "rule-2",
-							Source: agenticv1alpha1.AccessRuleSource{
-								Type: agenticv1alpha1.AuthorizationSourceTypeSPIFFE,
-								SPIFFE: func() *agenticv1alpha1.AuthorizationSourceSPIFFE {
-									s := agenticv1alpha1.AuthorizationSourceSPIFFE("spiffe://example.com/ns/default/sa/caller")
+							Source: agenticv1alpha2.AccessRuleSource{
+								Type: agenticv1alpha2.AuthorizationSourceTypeSPIFFE,
+								SPIFFE: func() *agenticv1alpha2.AuthorizationSourceSPIFFE {
+									s := agenticv1alpha2.AuthorizationSourceSPIFFE("spiffe://example.com/ns/default/sa/caller")
 									return &s
 								}(),
 							},
-							Authorization: &agenticv1alpha1.AuthorizationRule{
-								Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
-								Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-tool", Type: regexMatchType(), Value: "^(tool-b|tool-c)$"}},
+							Authorization: &agenticv1alpha2.AuthorizationRule{
+								Type:    agenticv1alpha2.AuthorizationRuleTypeInline,
+								Headers: []agenticv1alpha2.HTTPHeaderMatch{{Name: "x-tool", Type: regexMatchType(), Value: "^(tool-b|tool-c)$"}},
 							},
 						},
 					},
@@ -749,22 +749,22 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 		},
 		{
 			name: "one rule with service account in same namespace (empty ns in source)",
-			accessPolicy: &agenticv1alpha1.XAccessPolicy{
+			accessPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "my-ns", Name: "policy-5"},
-				Spec: agenticv1alpha1.AccessPolicySpec{
-					Rules: []agenticv1alpha1.AccessRule{
+				Spec: agenticv1alpha2.AccessPolicySpec{
+					Rules: []agenticv1alpha2.AccessRule{
 						{
 							Name: "rule-1",
-							Source: agenticv1alpha1.AccessRuleSource{
-								Type: agenticv1alpha1.AuthorizationSourceTypeServiceAccount,
-								ServiceAccount: &agenticv1alpha1.AuthorizationSourceServiceAccount{
+							Source: agenticv1alpha2.AccessRuleSource{
+								Type: agenticv1alpha2.AuthorizationSourceTypeServiceAccount,
+								ServiceAccount: &agenticv1alpha2.AuthorizationSourceServiceAccount{
 									Name: "my-sa",
 									// Namespace is omitted
 								},
 							},
-							Authorization: &agenticv1alpha1.AuthorizationRule{
-								Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
-								Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-tool", Value: "tool-1"}},
+							Authorization: &agenticv1alpha2.AuthorizationRule{
+								Type:    agenticv1alpha2.AuthorizationRuleTypeInline,
+								Headers: []agenticv1alpha2.HTTPHeaderMatch{{Name: "x-tool", Value: "tool-1"}},
 							},
 						},
 					},
@@ -785,23 +785,23 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 		},
 		{
 			name: "external authz",
-			accessPolicy: &agenticv1alpha1.XAccessPolicy{
+			accessPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "policy-ext-auth"},
-				Spec: agenticv1alpha1.AccessPolicySpec{
-					Action: agenticv1alpha1.ActionTypeExternalAuth,
+				Spec: agenticv1alpha2.AccessPolicySpec{
+					Action: agenticv1alpha2.ActionTypeExternalAuth,
 					ExternalAuth: &gatewayv1.HTTPExternalAuthFilter{
 						ExternalAuthProtocol: gatewayv1.HTTPRouteExternalAuthGRPCProtocol,
 						BackendRef: gatewayv1.BackendObjectReference{
 							Name: "ext-auth-svc",
 						},
 					},
-					Rules: []agenticv1alpha1.AccessRule{
+					Rules: []agenticv1alpha2.AccessRule{
 						{
 							Name: "rule-ext-auth",
-							Source: agenticv1alpha1.AccessRuleSource{
-								Type: agenticv1alpha1.AuthorizationSourceTypeSPIFFE,
-								SPIFFE: func() *agenticv1alpha1.AuthorizationSourceSPIFFE {
-									s := agenticv1alpha1.AuthorizationSourceSPIFFE("spiffe://example.com/ns/default/sa/caller")
+							Source: agenticv1alpha2.AccessRuleSource{
+								Type: agenticv1alpha2.AuthorizationSourceTypeSPIFFE,
+								SPIFFE: func() *agenticv1alpha2.AuthorizationSourceSPIFFE {
+									s := agenticv1alpha2.AuthorizationSourceSPIFFE("spiffe://example.com/ns/default/sa/caller")
 									return &s
 								}(),
 							},
@@ -826,10 +826,10 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 		},
 		{
 			name: "external authz with empty rules",
-			accessPolicy: &agenticv1alpha1.XAccessPolicy{
+			accessPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "policy-ext-auth-empty-rules"},
-				Spec: agenticv1alpha1.AccessPolicySpec{
-					Action: agenticv1alpha1.ActionTypeExternalAuth,
+				Spec: agenticv1alpha2.AccessPolicySpec{
+					Action: agenticv1alpha2.ActionTypeExternalAuth,
 					ExternalAuth: &gatewayv1.HTTPExternalAuthFilter{
 						ExternalAuthProtocol: gatewayv1.HTTPRouteExternalAuthGRPCProtocol,
 						BackendRef: gatewayv1.BackendObjectReference{
@@ -1053,15 +1053,15 @@ func findHeaderMatch(p *rbacconfigv3.Permission, name string) (exact, regex stri
 	return "", "", false
 }
 
-func regexMatchType() *agenticv1alpha1.HeaderMatchType {
-	m := agenticv1alpha1.HeaderMatchRegularExpression
+func regexMatchType() *agenticv1alpha2.HeaderMatchType {
+	m := agenticv1alpha2.HeaderMatchRegularExpression
 	return &m
 }
 
 func TestTranslateInlineAttributesToRBACPermission(t *testing.T) {
 	tests := []struct {
 		name  string
-		auth  *agenticv1alpha1.AuthorizationRule
+		auth  *agenticv1alpha2.AuthorizationRule
 		check func(*testing.T, *rbacconfigv3.Permission)
 	}{
 		{
@@ -1075,9 +1075,9 @@ func TestTranslateInlineAttributesToRBACPermission(t *testing.T) {
 		},
 		{
 			name: "methods and paths",
-			auth: &agenticv1alpha1.AuthorizationRule{
-				Methods: []agenticv1alpha1.HTTPMethod{"GET", "POST"},
-				Paths: []agenticv1alpha1.HTTPPathMatch{
+			auth: &agenticv1alpha2.AuthorizationRule{
+				Methods: []agenticv1alpha2.HTTPMethod{"GET", "POST"},
+				Paths: []agenticv1alpha2.HTTPPathMatch{
 					{Value: func(s string) *string { return &s }("/health")},
 				},
 			},
@@ -1090,12 +1090,12 @@ func TestTranslateInlineAttributesToRBACPermission(t *testing.T) {
 		},
 		{
 			name: "headers, hosts, and ports",
-			auth: &agenticv1alpha1.AuthorizationRule{
-				Headers: []agenticv1alpha1.HTTPHeaderMatch{
+			auth: &agenticv1alpha2.AuthorizationRule{
+				Headers: []agenticv1alpha2.HTTPHeaderMatch{
 					{Name: "x-role", Value: "admin"},
 				},
-				Hosts: []agenticv1alpha1.Hostname{".example.com"},
-				Ports: []agenticv1alpha1.PortNumber{8080},
+				Hosts: []agenticv1alpha2.Hostname{".example.com"},
+				Ports: []agenticv1alpha2.PortNumber{8080},
 			},
 			check: func(t *testing.T, p *rbacconfigv3.Permission) {
 				andRules := p.GetAndRules()
@@ -1116,12 +1116,12 @@ func TestTranslateInlineAttributesToRBACPermission(t *testing.T) {
 
 func TestTranslateAccessRuleToRBACPolicy(t *testing.T) {
 	tr := &Translator{}
-	rule := agenticv1alpha1.AccessRule{
+	rule := agenticv1alpha2.AccessRule{
 		Name: "test-rule",
-		Authorization: &agenticv1alpha1.AuthorizationRule{
-			Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
-			Methods: []agenticv1alpha1.HTTPMethod{"GET"},
-			Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-example", Value: "v"}},
+		Authorization: &agenticv1alpha2.AuthorizationRule{
+			Type:    agenticv1alpha2.AuthorizationRuleTypeInline,
+			Methods: []agenticv1alpha2.HTTPMethod{"GET"},
+			Headers: []agenticv1alpha2.HTTPHeaderMatch{{Name: "x-example", Value: "v"}},
 		},
 	}
 	policy := tr.translateAccessRuleToRBACPolicy("default", rule)
