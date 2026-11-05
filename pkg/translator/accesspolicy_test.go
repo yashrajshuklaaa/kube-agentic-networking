@@ -396,105 +396,6 @@ func TestBuildBackendLevelRBACOverrides(t *testing.T) {
 	}
 }
 
-func TestBuildRBACConfigWithCommonPolicies(t *testing.T) {
-	tr := &Translator{}
-	policy := &agenticv1alpha1.XAccessPolicy{
-		Spec: agenticv1alpha1.AccessPolicySpec{
-			Rules: []agenticv1alpha1.AccessRule{
-				{
-					Name: "custom-rule",
-					Authorization: &agenticv1alpha1.AuthorizationRule{
-						Type: agenticv1alpha1.AuthorizationRuleTypeInline,
-						MCP: agenticv1alpha1.MCPAttributes{
-							MCPBaseProtocolMethodsOption: agenticv1alpha1.MCPBaseProtocolMethodsOptionMatch,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	rbac := tr.buildRBACConfigWithCommonPolicies(policy)
-
-	rbacPolicy := rbac.GetRules().GetPolicies()["custom-rule"]
-	if rbacPolicy == nil {
-		t.Fatal("Expected policy 'custom-rule' not found")
-	}
-
-	permissions := rbacPolicy.GetPermissions()
-	if len(permissions) != 8 {
-		t.Fatalf("Expected 8 permissions, got %d", len(permissions))
-	}
-
-	// Verify MCP base methods (exact matches)
-	expectedExact := map[string]bool{
-		"initialize": false,
-		"tools/list": false,
-		"ping":       false,
-	}
-	for i := 0; i < 3; i++ {
-		mcpRule := permissions[i].GetSourcedMetadata()
-		if mcpRule == nil || mcpRule.GetMetadataMatcher() == nil {
-			t.Fatalf("Expected SourcedMetadata for rule %d, got %+v", i, permissions[i])
-		}
-		val := mcpRule.GetMetadataMatcher().GetValue().GetStringMatch().GetExact()
-		if _, ok := expectedExact[val]; ok {
-			expectedExact[val] = true
-		} else {
-			t.Errorf("Unexpected exact match value: %q", val)
-		}
-	}
-	for val, found := range expectedExact {
-		if !found {
-			t.Errorf("Expected exact match for %q not found", val)
-		}
-	}
-
-	// Verify MCP base methods (prefix matches)
-	expectedPrefix := map[string]bool{
-		"completion/":    false,
-		"logging/":       false,
-		"notifications/": false,
-	}
-	for i := 3; i < 6; i++ {
-		mcpRule := permissions[i].GetSourcedMetadata()
-		if mcpRule == nil || mcpRule.GetMetadataMatcher() == nil {
-			t.Fatalf("Expected SourcedMetadata for rule %d, got %+v", i, permissions[i])
-		}
-		val := mcpRule.GetMetadataMatcher().GetValue().GetStringMatch().GetPrefix()
-		if _, ok := expectedPrefix[val]; ok {
-			expectedPrefix[val] = true
-		} else {
-			t.Errorf("Unexpected prefix match value: %q", val)
-		}
-	}
-	for val, found := range expectedPrefix {
-		if !found {
-			t.Errorf("Expected prefix match for %q not found", val)
-		}
-	}
-
-	// Rule 6: HTTP GET
-	getRule := permissions[6].GetHeader()
-	if getRule == nil || getRule.GetName() != ":method" || getRule.GetStringMatch().GetExact() != "GET" {
-		t.Errorf("Expected HTTP GET header matcher, got %+v", permissions[6])
-	}
-
-	// Rule 7: HTTP DELETE with session-id header
-	deleteRule := permissions[7].GetAndRules()
-	if deleteRule == nil || len(deleteRule.GetRules()) != 2 {
-		t.Fatalf("Expected AndRules for HTTP DELETE, got %+v", permissions[7])
-	}
-	delMethodRule := deleteRule.GetRules()[0].GetHeader()
-	if delMethodRule == nil || delMethodRule.GetName() != ":method" || delMethodRule.GetStringMatch().GetExact() != "DELETE" {
-		t.Errorf("Expected HTTP DELETE method matcher, got %+v", deleteRule.GetRules()[0])
-	}
-	sessionHeaderRule := deleteRule.GetRules()[1].GetHeader()
-	if sessionHeaderRule == nil || sessionHeaderRule.GetName() != constants.MCPSessionIDHeader || !sessionHeaderRule.GetPresentMatch() {
-		t.Errorf("Expected session-id header presence matcher, got %+v", deleteRule.GetRules()[1])
-	}
-}
-
 func TestBuildRBACConfigWithoutCommonPolicies(t *testing.T) {
 	tr := &Translator{}
 	policy := &agenticv1alpha1.XAccessPolicy{
@@ -504,9 +405,6 @@ func TestBuildRBACConfigWithoutCommonPolicies(t *testing.T) {
 					Name: "custom-rule",
 					Authorization: &agenticv1alpha1.AuthorizationRule{
 						Type: agenticv1alpha1.AuthorizationRuleTypeInline,
-						MCP:  agenticv1alpha1.MCPAttributes{
-							// Defaults to SKIP_BASE_PROTOCOL_METHODS
-						},
 					},
 				},
 			},
@@ -731,15 +629,8 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 			accessPolicy: func() *agenticv1alpha1.XAccessPolicy {
 				p := newTestAccessPolicy("policy-1", "default", "dummy", "Gateway", "spiffe://example.com/ns/default/sa/caller")
 				p.Spec.Rules[0].Authorization = &agenticv1alpha1.AuthorizationRule{
-					Type: agenticv1alpha1.AuthorizationRuleTypeInline,
-					MCP: agenticv1alpha1.MCPAttributes{
-						Methods: []agenticv1alpha1.MCPMethod{
-							{
-								Name:   "tools/call",
-								Params: []agenticv1alpha1.MCPMethodParam{"tool-1"},
-							},
-						},
-					},
+					Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
+					Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-tool", Value: "tool-1"}},
 				}
 				return p
 			}(),
@@ -762,9 +653,6 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 				p := newTestAccessPolicy("policy-2", "default", "dummy", "Gateway", "spiffe://example.com/ns/default/sa/caller")
 				p.Spec.Rules[0].Authorization = &agenticv1alpha1.AuthorizationRule{
 					Type: agenticv1alpha1.AuthorizationRuleTypeInline,
-					MCP: agenticv1alpha1.MCPAttributes{
-						Methods: []agenticv1alpha1.MCPMethod{},
-					},
 				}
 				return p
 			}(),
@@ -817,15 +705,8 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 								},
 							},
 							Authorization: &agenticv1alpha1.AuthorizationRule{
-								Type: agenticv1alpha1.AuthorizationRuleTypeInline,
-								MCP: agenticv1alpha1.MCPAttributes{
-									Methods: []agenticv1alpha1.MCPMethod{
-										{
-											Name:   "tools/call",
-											Params: []agenticv1alpha1.MCPMethodParam{"tool-a"},
-										},
-									},
-								},
+								Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
+								Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-tool", Value: "tool-a"}},
 							},
 						},
 						{
@@ -838,15 +719,8 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 								}(),
 							},
 							Authorization: &agenticv1alpha1.AuthorizationRule{
-								Type: agenticv1alpha1.AuthorizationRuleTypeInline,
-								MCP: agenticv1alpha1.MCPAttributes{
-									Methods: []agenticv1alpha1.MCPMethod{
-										{
-											Name:   "tools/call",
-											Params: []agenticv1alpha1.MCPMethodParam{"tool-b", "tool-c"},
-										},
-									},
-								},
+								Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
+								Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-tool", Type: regexMatchType(), Value: "^(tool-b|tool-c)$"}},
 							},
 						},
 					},
@@ -889,15 +763,8 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 								},
 							},
 							Authorization: &agenticv1alpha1.AuthorizationRule{
-								Type: agenticv1alpha1.AuthorizationRuleTypeInline,
-								MCP: agenticv1alpha1.MCPAttributes{
-									Methods: []agenticv1alpha1.MCPMethod{
-										{
-											Name:   "tools/call",
-											Params: []agenticv1alpha1.MCPMethodParam{"tool-1"},
-										},
-									},
-								},
+								Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
+								Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-tool", Value: "tool-1"}},
 							},
 						},
 					},
@@ -1134,68 +1001,61 @@ func verifyPolicy(t *testing.T, rbacPolicy *rbacconfigv3.Policy, expected expect
 		return
 	}
 
-	// The top level permission should be an AndRules
-	andRules := rbacPolicy.GetPermissions()[0].GetAndRules()
-	if andRules == nil || len(andRules.GetRules()) != 2 {
-		t.Errorf("expected tools permission to have 2 ANDed rules (method and tools)")
+	// Inline rules now match plain HTTP headers. "permissions" holds the expected x-tool values.
+	var exact, regex string
+	found := false
+	for _, perm := range rbacPolicy.GetPermissions() {
+		if e, r, ok := findHeaderMatch(perm, "x-tool"); ok {
+			exact, regex, found = e, r, true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected an x-tool header matcher in permissions, found none")
 		return
 	}
-
-	// Rule 1: method must be tools/call
-	methodRule := andRules.GetRules()[0].GetSourcedMetadata()
-	if methodRule == nil || methodRule.GetMetadataMatcher() == nil || methodRule.GetMetadataMatcher().GetFilter() != constants.MCPProxyFilterName {
-		t.Errorf("first AND rule should be sourced metadata from %s", constants.MCPProxyFilterName)
-		return
-	}
-	// Verify Path ["method"]
-	if methodRule.GetMetadataMatcher().GetPath()[0].GetKey() != "method" {
-		t.Errorf("tools/call matcher should have path ['method']")
-	}
-	// Verify Value "tools/call"
-	if methodRule.GetMetadataMatcher().GetValue().GetStringMatch().GetExact() != constants.ToolsCallMethod {
-		t.Errorf("tools/call matcher should match exact string %q", constants.ToolsCallMethod)
-	}
-
-	// Rule 2: tool names match
-	toolsRule := andRules.GetRules()[1].GetSourcedMetadata()
-	if toolsRule == nil || toolsRule.GetMetadataMatcher() == nil {
-		t.Errorf("second AND rule should be tool name matchers")
-		return
-	}
-	// Verify Path ["params", "name"]
-	if toolsRule.GetMetadataMatcher().GetPath()[0].GetKey() != "params" || toolsRule.GetMetadataMatcher().GetPath()[1].GetKey() != "name" {
-		t.Errorf("tools matcher should have path ['params', 'name']")
-	}
-
-	// Verify tool names exactly match
 	if len(expected.permissions) == 1 {
-		// Single tool uses StringMatch directly
-		got := toolsRule.GetMetadataMatcher().GetValue().GetStringMatch().GetExact()
-		if got != expected.permissions[0] {
-			t.Errorf("tool name: expected %q, got %q", expected.permissions[0], got)
+		if exact != expected.permissions[0] {
+			t.Errorf("tool header: expected %q, got %q", expected.permissions[0], exact)
 		}
-	} else {
-		// Multiple tools use OrMatch
-		orMatch := toolsRule.GetMetadataMatcher().GetValue().GetOrMatch()
-		if orMatch == nil {
-			t.Errorf("expected OrMatch for multiple tools")
-			return
+		return
+	}
+	alt := ""
+	for i, tool := range expected.permissions {
+		if i > 0 {
+			alt += "|"
 		}
-		if len(orMatch.GetValueMatchers()) != len(expected.permissions) {
-			t.Errorf("expected %d tools in OrMatch, got %d", len(expected.permissions), len(orMatch.GetValueMatchers()))
-			return
-		}
-		// Convert actual matchers to a map for easy lookup
-		actualTools := make(map[string]bool)
-		for _, v := range orMatch.GetValueMatchers() {
-			actualTools[v.GetStringMatch().GetExact()] = true
-		}
-		for _, expectedTool := range expected.permissions {
-			if !actualTools[expectedTool] {
-				t.Errorf("expected tool %q not found in OrMatch", expectedTool)
-			}
+		alt += tool
+	}
+	if want := "^(" + alt + ")$"; regex != want {
+		t.Errorf("tool header regex: expected %q, got %q", want, regex)
+	}
+}
+
+// findHeaderMatch searches a permission tree for a header matcher with the given name.
+func findHeaderMatch(p *rbacconfigv3.Permission, name string) (exact, regex string, found bool) {
+	if p == nil {
+		return "", "", false
+	}
+	if h := p.GetHeader(); h != nil && h.GetName() == name {
+		return h.GetStringMatch().GetExact(), h.GetStringMatch().GetSafeRegex().GetRegex(), true
+	}
+	for _, sub := range p.GetAndRules().GetRules() {
+		if e, r, ok := findHeaderMatch(sub, name); ok {
+			return e, r, true
 		}
 	}
+	for _, sub := range p.GetOrRules().GetRules() {
+		if e, r, ok := findHeaderMatch(sub, name); ok {
+			return e, r, true
+		}
+	}
+	return "", "", false
+}
+
+func regexMatchType() *agenticv1alpha1.HeaderMatchType {
+	m := agenticv1alpha1.HeaderMatchRegularExpression
+	return &m
 }
 
 func TestTranslateInlineAttributesToRBACPermission(t *testing.T) {
@@ -1261,11 +1121,7 @@ func TestTranslateAccessRuleToRBACPolicy(t *testing.T) {
 		Authorization: &agenticv1alpha1.AuthorizationRule{
 			Type:    agenticv1alpha1.AuthorizationRuleTypeInline,
 			Methods: []agenticv1alpha1.HTTPMethod{"GET"},
-			MCP: agenticv1alpha1.MCPAttributes{
-				Methods: []agenticv1alpha1.MCPMethod{
-					{Name: "tools/call"},
-				},
-			},
+			Headers: []agenticv1alpha1.HTTPHeaderMatch{{Name: "x-example", Value: "v"}},
 		},
 	}
 	policy := tr.translateAccessRuleToRBACPolicy("default", rule)
