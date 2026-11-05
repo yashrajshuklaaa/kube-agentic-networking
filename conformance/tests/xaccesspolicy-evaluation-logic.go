@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	"sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	"sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	localfeatures "sigs.k8s.io/kube-agentic-networking/conformance/utils/features"
 	"sigs.k8s.io/kube-agentic-networking/pkg/helpers"
 )
@@ -62,7 +62,7 @@ var XAccessPolicyEvaluationLogic = suite.ConformanceTest{
 
 		// 2. Wait for policies to be accepted
 		t.Logf("Waiting for XAccessPolicy %s to be accepted", extAuthPolicyName)
-		extAuthPolicy := &v1alpha1.XAccessPolicy{}
+		extAuthPolicy := &v1alpha2.XAccessPolicy{}
 		err = wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(ctx context.Context) (bool, error) {
 			getErr := s.Client.Get(ctx, extAuthPolicyName, extAuthPolicy)
 			if getErr != nil {
@@ -74,7 +74,7 @@ var XAccessPolicyEvaluationLogic = suite.ConformanceTest{
 		require.NoError(t, err, "timed out waiting for ExternalAuth XAccessPolicy to be accepted")
 
 		t.Logf("Waiting for XAccessPolicy %s to be accepted", allowPolicyName)
-		allowPolicy := &v1alpha1.XAccessPolicy{}
+		allowPolicy := &v1alpha2.XAccessPolicy{}
 		err = wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(ctx context.Context) (bool, error) {
 			getErr := s.Client.Get(ctx, allowPolicyName, allowPolicy)
 			if getErr != nil {

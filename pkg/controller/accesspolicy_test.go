@@ -26,7 +26,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	agenticv0alpha0 "sigs.k8s.io/kube-agentic-networking/api/v0alpha0"
-	agenticv1alpha1 "sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	agenticv1alpha2 "sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	agenticclient "sigs.k8s.io/kube-agentic-networking/k8s/client/clientset/versioned/fake"
 	agenticinformers "sigs.k8s.io/kube-agentic-networking/k8s/client/informers/externalversions"
 )
@@ -39,15 +39,15 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 	tests := []struct {
 		name          string
 		existing      []runtime.Object
-		currentPolicy *agenticv1alpha1.XAccessPolicy
+		currentPolicy *agenticv1alpha2.XAccessPolicy
 		wantAccepted  bool
 	}{
 		{
 			name: "under limit - single target",
 			existing: []runtime.Object{
-				&agenticv1alpha1.XAccessPolicy{
+				&agenticv1alpha2.XAccessPolicy{
 					ObjectMeta: metav1.ObjectMeta{Name: "policy-1", Namespace: ns, CreationTimestamp: earlier},
-					Spec: agenticv1alpha1.AccessPolicySpec{
+					Spec: agenticv1alpha2.AccessPolicySpec{
 						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group(agenticv0alpha0.GroupName),
@@ -58,9 +58,9 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 					},
 				},
 			},
-			currentPolicy: &agenticv1alpha1.XAccessPolicy{
+			currentPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "policy-2", Namespace: ns, CreationTimestamp: now},
-				Spec: agenticv1alpha1.AccessPolicySpec{
+				Spec: agenticv1alpha2.AccessPolicySpec{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 							Group: gwapiv1.Group(agenticv0alpha0.GroupName),
@@ -75,10 +75,10 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 		{
 			name: "external auth conflict - secondary policy rejected",
 			existing: []runtime.Object{
-				&agenticv1alpha1.XAccessPolicy{
+				&agenticv1alpha2.XAccessPolicy{
 					ObjectMeta: metav1.ObjectMeta{Name: "ext-auth-senior", Namespace: ns, CreationTimestamp: earlier},
-					Spec: agenticv1alpha1.AccessPolicySpec{
-						Action: agenticv1alpha1.ActionTypeExternalAuth,
+					Spec: agenticv1alpha2.AccessPolicySpec{
+						Action: agenticv1alpha2.ActionTypeExternalAuth,
 						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group(agenticv0alpha0.GroupName),
@@ -89,10 +89,10 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 					},
 				},
 			},
-			currentPolicy: &agenticv1alpha1.XAccessPolicy{
+			currentPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "ext-auth-junior", Namespace: ns, CreationTimestamp: now},
-				Spec: agenticv1alpha1.AccessPolicySpec{
-					Action: agenticv1alpha1.ActionTypeExternalAuth,
+				Spec: agenticv1alpha2.AccessPolicySpec{
+					Action: agenticv1alpha2.ActionTypeExternalAuth,
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 							Group: gwapiv1.Group(agenticv0alpha0.GroupName),
@@ -107,15 +107,15 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 		{
 			name: "over limit - rejected",
 			existing: []runtime.Object{
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p1", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p2", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p3", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p4", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p5", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p1", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p2", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p3", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p4", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p5", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
 			},
-			currentPolicy: &agenticv1alpha1.XAccessPolicy{
+			currentPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "policy-new", Namespace: ns, CreationTimestamp: now},
-				Spec: agenticv1alpha1.AccessPolicySpec{
+				Spec: agenticv1alpha2.AccessPolicySpec{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 							Group: gwapiv1.Group(agenticv0alpha0.GroupName),
@@ -130,15 +130,15 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 		{
 			name: "over limit - seniority rules (current is older)",
 			existing: []runtime.Object{
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p1", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p2", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p3", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p4", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p5", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p1", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p2", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p3", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p4", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p5", Namespace: ns, CreationTimestamp: now}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-a"}}}}},
 			},
-			currentPolicy: &agenticv1alpha1.XAccessPolicy{
+			currentPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "policy-old", Namespace: ns, CreationTimestamp: earlier},
-				Spec: agenticv1alpha1.AccessPolicySpec{
+				Spec: agenticv1alpha2.AccessPolicySpec{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 							Group: gwapiv1.Group(agenticv0alpha0.GroupName),
@@ -153,15 +153,15 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 		{
 			name: "multiple targets - one over limit fails all",
 			existing: []runtime.Object{
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p1", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p2", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p3", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p4", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
-				&agenticv1alpha1.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p5", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha1.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p1", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p2", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p3", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p4", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
+				&agenticv1alpha2.XAccessPolicy{ObjectMeta: metav1.ObjectMeta{Name: "p5", Namespace: ns, CreationTimestamp: earlier}, Spec: agenticv1alpha2.AccessPolicySpec{TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: gwapiv1.Group(agenticv0alpha0.GroupName), Kind: "XBackend", Name: "target-full"}}}}},
 			},
-			currentPolicy: &agenticv1alpha1.XAccessPolicy{
+			currentPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "policy-multi", Namespace: ns, CreationTimestamp: now},
-				Spec: agenticv1alpha1.AccessPolicySpec{
+				Spec: agenticv1alpha2.AccessPolicySpec{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 						{
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
@@ -185,9 +185,9 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 		{
 			name: "determinism - name tie-breaker",
 			existing: []runtime.Object{
-				&agenticv1alpha1.XAccessPolicy{
+				&agenticv1alpha2.XAccessPolicy{
 					ObjectMeta: metav1.ObjectMeta{Name: "policy-b", Namespace: ns, CreationTimestamp: now},
-					Spec: agenticv1alpha1.AccessPolicySpec{
+					Spec: agenticv1alpha2.AccessPolicySpec{
 						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 								Group: gwapiv1.Group(agenticv0alpha0.GroupName),
@@ -198,9 +198,9 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 					},
 				},
 			},
-			currentPolicy: &agenticv1alpha1.XAccessPolicy{
+			currentPolicy: &agenticv1alpha2.XAccessPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "policy-a", Namespace: ns, CreationTimestamp: now},
-				Spec: agenticv1alpha1.AccessPolicySpec{
+				Spec: agenticv1alpha2.AccessPolicySpec{
 					TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
 						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 							Group: gwapiv1.Group(agenticv0alpha0.GroupName),
@@ -222,10 +222,10 @@ func TestIsPolicyUnderTargetLimit(t *testing.T) {
 			allPolicies = append(allPolicies, tt.currentPolicy)
 			fakeClient := agenticclient.NewSimpleClientset(allPolicies...)
 			informerFactory := agenticinformers.NewSharedInformerFactory(fakeClient, 0)
-			lister := informerFactory.Agentic().V1alpha1().XAccessPolicies().Lister()
+			lister := informerFactory.Agentic().V1alpha2().XAccessPolicies().Lister()
 
 			for _, p := range allPolicies {
-				_ = informerFactory.Agentic().V1alpha1().XAccessPolicies().Informer().GetIndexer().Add(p)
+				_ = informerFactory.Agentic().V1alpha2().XAccessPolicies().Informer().GetIndexer().Add(p)
 			}
 
 			c := &Controller{

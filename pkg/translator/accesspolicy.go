@@ -31,9 +31,9 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	agenticv0alpha0 "sigs.k8s.io/kube-agentic-networking/api/v0alpha0"
-	agenticv1alpha1 "sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	agenticv1alpha2 "sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	"sigs.k8s.io/kube-agentic-networking/pkg/constants"
-	helpersv1alpha1 "sigs.k8s.io/kube-agentic-networking/pkg/helpers"
+	helpersv1alpha2 "sigs.k8s.io/kube-agentic-networking/pkg/helpers"
 )
 
 // buildGatewayLevelRBACFilters finds all AccessPolicies targeting the Gateway and translates them into HTTP filters.
@@ -44,15 +44,15 @@ func (t *Translator) buildGatewayLevelRBACFilters(gateway *gatewayv1.Gateway) ([
 	}
 
 	var filters []*hcm.HttpFilter
-	var extAuthPolicy *agenticv1alpha1.XAccessPolicy
-	var allowPolicies []*agenticv1alpha1.XAccessPolicy
+	var extAuthPolicy *agenticv1alpha2.XAccessPolicy
+	var allowPolicies []*agenticv1alpha2.XAccessPolicy
 
 	for _, policy := range gwPolicies {
-		if policy.Spec.Action == agenticv1alpha1.ActionTypeExternalAuth {
+		if policy.Spec.Action == agenticv1alpha2.ActionTypeExternalAuth {
 			if extAuthPolicy == nil {
 				extAuthPolicy = policy
 			}
-		} else if policy.Spec.Action == agenticv1alpha1.ActionTypeAllow {
+		} else if policy.Spec.Action == agenticv1alpha2.ActionTypeAllow {
 			allowPolicies = append(allowPolicies, policy)
 		}
 	}
@@ -127,15 +127,15 @@ func (t *Translator) buildBackendLevelRBACOverrides(backend *agenticv0alpha0.XBa
 		return nil, err
 	}
 
-	var extAuthPolicy *agenticv1alpha1.XAccessPolicy
-	var allowPolicies []*agenticv1alpha1.XAccessPolicy
+	var extAuthPolicy *agenticv1alpha2.XAccessPolicy
+	var allowPolicies []*agenticv1alpha2.XAccessPolicy
 
 	for _, policy := range backendPolicies {
-		if policy.Spec.Action == agenticv1alpha1.ActionTypeExternalAuth {
+		if policy.Spec.Action == agenticv1alpha2.ActionTypeExternalAuth {
 			if extAuthPolicy == nil {
 				extAuthPolicy = policy
 			}
-		} else if policy.Spec.Action == agenticv1alpha1.ActionTypeAllow {
+		} else if policy.Spec.Action == agenticv1alpha2.ActionTypeAllow {
 			allowPolicies = append(allowPolicies, policy)
 		}
 	}
@@ -171,11 +171,11 @@ func (t *Translator) buildBackendLevelRBACOverrides(backend *agenticv0alpha0.XBa
 
 // buildRBACConfigWithCommonPolicies generates an RBAC config for an AccessPolicy.
 // It includes the common policies needed for MCP session management to avoid blocking basic operations.
-func (t *Translator) buildRBACConfigWithCommonPolicies(accessPolicy *agenticv1alpha1.XAccessPolicy) *rbacv3.RBAC {
+func (t *Translator) buildRBACConfigWithCommonPolicies(accessPolicy *agenticv1alpha2.XAccessPolicy) *rbacv3.RBAC {
 	return t.translateAccessPolicyToRBAC(accessPolicy)
 }
 
-func (t *Translator) mergeAllowPoliciesToRBAC(policies []*agenticv1alpha1.XAccessPolicy) *rbacv3.RBAC {
+func (t *Translator) mergeAllowPoliciesToRBAC(policies []*agenticv1alpha2.XAccessPolicy) *rbacv3.RBAC {
 	rbacConfig := &rbacv3.RBAC{}
 
 	for _, policy := range policies {
@@ -198,17 +198,17 @@ func (t *Translator) mergeAllowPoliciesToRBAC(policies []*agenticv1alpha1.XAcces
 // It returns only accepted policies.
 // TODO: Indexing AccessPolicies by their target refs for more efficient lookups.
 // https://github.com/kubernetes-sigs/kube-agentic-networking/issues/168
-func (t *Translator) findAccessPoliciesForTarget(group, kind, namespace, name string) ([]*agenticv1alpha1.XAccessPolicy, error) {
+func (t *Translator) findAccessPoliciesForTarget(group, kind, namespace, name string) ([]*agenticv1alpha2.XAccessPolicy, error) {
 	// List all AccessPolicies in the target's namespace.
 	allAccessPolicies, err := t.accessPolicyLister.XAccessPolicies(namespace).List(labels.Everything())
 	if err != nil {
 		return nil, fmt.Errorf("failed to list AccessPolicies in namespace %s: %w", namespace, err)
 	}
 
-	var policies []*agenticv1alpha1.XAccessPolicy
+	var policies []*agenticv1alpha2.XAccessPolicy
 	for _, accessPolicy := range allAccessPolicies {
 		// Only consider policies that have been accepted by the controller.
-		if !helpersv1alpha1.IsXAccessPolicyAccepted(accessPolicy) {
+		if !helpersv1alpha2.IsXAccessPolicyAccepted(accessPolicy) {
 			continue
 		}
 
@@ -223,7 +223,7 @@ func (t *Translator) findAccessPoliciesForTarget(group, kind, namespace, name st
 	// Sort policies by action first (ExternalAuth before Allow), then creation timestamp (oldest first). Break ties by name for deterministic output.
 	sort.Slice(policies, func(i, j int) bool {
 		if policies[i].Spec.Action != policies[j].Spec.Action {
-			return policies[i].Spec.Action == agenticv1alpha1.ActionTypeExternalAuth
+			return policies[i].Spec.Action == agenticv1alpha2.ActionTypeExternalAuth
 		}
 		if policies[i].CreationTimestamp.Time.Equal(policies[j].CreationTimestamp.Time) {
 			return policies[i].Name < policies[j].Name
@@ -240,11 +240,11 @@ func convertSAtoSPIFFEID(trustDomain, namespace, saName string) string {
 	return fmt.Sprintf(constants.SpiffeIDFormat, trustDomain, namespace, saName)
 }
 
-func (t *Translator) translateAccessPolicyToRBAC(accessPolicy *agenticv1alpha1.XAccessPolicy) *rbacv3.RBAC {
+func (t *Translator) translateAccessPolicyToRBAC(accessPolicy *agenticv1alpha2.XAccessPolicy) *rbacv3.RBAC {
 	rbacConfig := &rbacv3.RBAC{}
 
 	if len(accessPolicy.Spec.Rules) == 0 {
-		if accessPolicy.Spec.Action == agenticv1alpha1.ActionTypeExternalAuth && accessPolicy.Spec.ExternalAuth != nil {
+		if accessPolicy.Spec.Action == agenticv1alpha2.ActionTypeExternalAuth && accessPolicy.Spec.ExternalAuth != nil {
 			hash, err := externalAuthUniqueID(accessPolicy.Spec.ExternalAuth)
 			if err != nil {
 				klog.Errorf("Failed to generate unique ID for externalAuth config in AccessPolicy %s/%s: %v", accessPolicy.Namespace, accessPolicy.Name, err)
@@ -284,7 +284,7 @@ func (t *Translator) translateAccessPolicyToRBAC(accessPolicy *agenticv1alpha1.X
 		// - ExternalAuth: RBAC_DENY shadow rules write dynamic metadata used as a gate to fire the ext_authz call.
 		// - Allow: RBAC_ALLOW shadow rules mirror enforcement so shadow stats expose which rule matched for tracing.
 		// Handle ExternalAuth at policy level
-		if accessPolicy.Spec.Action == agenticv1alpha1.ActionTypeExternalAuth && accessPolicy.Spec.ExternalAuth != nil {
+		if accessPolicy.Spec.Action == agenticv1alpha2.ActionTypeExternalAuth && accessPolicy.Spec.ExternalAuth != nil {
 			hash, err := externalAuthUniqueID(accessPolicy.Spec.ExternalAuth)
 			if err != nil {
 				klog.Errorf("Failed to generate unique ID for externalAuth config in AccessPolicy %s/%s: %v", accessPolicy.Namespace, accessPolicy.Name, err)
@@ -320,7 +320,7 @@ func (t *Translator) translateAccessPolicyToRBAC(accessPolicy *agenticv1alpha1.X
 	return rbacConfig
 }
 
-func (t *Translator) translateAccessRuleToRBACPolicy(policyNamespace string, rule agenticv1alpha1.AccessRule) *rbacconfigv3.Policy {
+func (t *Translator) translateAccessRuleToRBACPolicy(policyNamespace string, rule agenticv1alpha2.AccessRule) *rbacconfigv3.Policy {
 	source := t.ruleSourceToPrincipalName(policyNamespace, rule.Source)
 
 	var principalIDs []*rbacconfigv3.Principal
@@ -346,14 +346,14 @@ func (t *Translator) translateAccessRuleToRBACPolicy(policyNamespace string, rul
 	var authPerms []*rbacconfigv3.Permission
 	if rule.Authorization != nil {
 		switch rule.Authorization.Type {
-		case agenticv1alpha1.AuthorizationRuleTypeInline:
+		case agenticv1alpha2.AuthorizationRuleTypeInline:
 			httpPerm := translateInlineAttributesToRBACPermission(rule.Authorization)
 			if httpPerm != nil {
 				authPerms = []*rbacconfigv3.Permission{httpPerm}
 			} else {
 				authPerms = []*rbacconfigv3.Permission{buildAnyPermission()}
 			}
-		case agenticv1alpha1.AuthorizationRuleTypeCEL:
+		case agenticv1alpha2.AuthorizationRuleTypeCEL:
 			if rule.Authorization.CEL != nil {
 				ast, err := CompileCelExpression(rule.Authorization.CEL.Expression)
 				if err != nil {
@@ -375,7 +375,7 @@ func (t *Translator) translateAccessRuleToRBACPolicy(policyNamespace string, rul
 	return rbacPolicy
 }
 
-func translateInlineAttributesToRBACPermission(auth *agenticv1alpha1.AuthorizationRule) *rbacconfigv3.Permission {
+func translateInlineAttributesToRBACPermission(auth *agenticv1alpha2.AuthorizationRule) *rbacconfigv3.Permission {
 	if auth == nil {
 		return nil
 	}
@@ -509,22 +509,22 @@ func translateInlineAttributesToRBACPermission(auth *agenticv1alpha1.Authorizati
 	}
 }
 
-func translateHTTPPathMatch(path agenticv1alpha1.HTTPPathMatch) *matcherv3.StringMatcher {
+func translateHTTPPathMatch(path agenticv1alpha2.HTTPPathMatch) *matcherv3.StringMatcher {
 	val := ""
 	if path.Value != nil {
 		val = *path.Value
 	}
 	sm := &matcherv3.StringMatcher{}
-	matchType := agenticv1alpha1.PathMatchPathPrefix
+	matchType := agenticv1alpha2.PathMatchPathPrefix
 	if path.Type != nil {
 		matchType = *path.Type
 	}
 	switch matchType {
-	case agenticv1alpha1.PathMatchExact:
+	case agenticv1alpha2.PathMatchExact:
 		sm.MatchPattern = &matcherv3.StringMatcher_Exact{Exact: val}
-	case agenticv1alpha1.PathMatchPathPrefix:
+	case agenticv1alpha2.PathMatchPathPrefix:
 		sm.MatchPattern = &matcherv3.StringMatcher_Prefix{Prefix: val}
-	case agenticv1alpha1.PathMatchRegularExpression:
+	case agenticv1alpha2.PathMatchRegularExpression:
 		sm.MatchPattern = &matcherv3.StringMatcher_SafeRegex{
 			SafeRegex: &matcherv3.RegexMatcher{
 				EngineType: &matcherv3.RegexMatcher_GoogleRe2{GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{}},
@@ -537,16 +537,16 @@ func translateHTTPPathMatch(path agenticv1alpha1.HTTPPathMatch) *matcherv3.Strin
 	return sm
 }
 
-func translateHTTPHeaderMatch(header agenticv1alpha1.HTTPHeaderMatch) *routev3.HeaderMatcher {
+func translateHTTPHeaderMatch(header agenticv1alpha2.HTTPHeaderMatch) *routev3.HeaderMatcher {
 	sm := &matcherv3.StringMatcher{}
-	matchType := agenticv1alpha1.HeaderMatchExact
+	matchType := agenticv1alpha2.HeaderMatchExact
 	if header.Type != nil {
 		matchType = *header.Type
 	}
 	switch matchType {
-	case agenticv1alpha1.HeaderMatchExact:
+	case agenticv1alpha2.HeaderMatchExact:
 		sm.MatchPattern = &matcherv3.StringMatcher_Exact{Exact: header.Value}
-	case agenticv1alpha1.HeaderMatchRegularExpression:
+	case agenticv1alpha2.HeaderMatchRegularExpression:
 		sm.MatchPattern = &matcherv3.StringMatcher_SafeRegex{
 			SafeRegex: &matcherv3.RegexMatcher{
 				EngineType: &matcherv3.RegexMatcher_GoogleRe2{GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{}},
@@ -563,13 +563,13 @@ func translateHTTPHeaderMatch(header agenticv1alpha1.HTTPHeaderMatch) *routev3.H
 }
 
 // ruleSourceToPrincipalName converts an AccessRule source into a SPIFFE ID string.
-func (t *Translator) ruleSourceToPrincipalName(policyNamespace string, source agenticv1alpha1.AccessRuleSource) string {
+func (t *Translator) ruleSourceToPrincipalName(policyNamespace string, source agenticv1alpha2.AccessRuleSource) string {
 	switch source.Type {
-	case agenticv1alpha1.AuthorizationSourceTypeSPIFFE:
+	case agenticv1alpha2.AuthorizationSourceTypeSPIFFE:
 		if source.SPIFFE != nil {
 			return string(*source.SPIFFE)
 		}
-	case agenticv1alpha1.AuthorizationSourceTypeServiceAccount:
+	case agenticv1alpha2.AuthorizationSourceTypeServiceAccount:
 		if source.ServiceAccount != nil {
 			ns := source.ServiceAccount.Namespace
 			if ns == "" {
