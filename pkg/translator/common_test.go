@@ -26,7 +26,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	agenticv0alpha0 "sigs.k8s.io/kube-agentic-networking/api/v0alpha0"
-	agenticv1alpha1 "sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	agenticv1alpha2 "sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 )
 
 // Suppress linter as ns always receives the same value: "quickstart-ns"
@@ -101,16 +101,16 @@ func newTestHTTPRoute(name, ns, gwName, backendName string) *gatewayv1.HTTPRoute
 	}
 }
 
-func newTestAccessPolicy(name, ns, targetName, targetKind, principal string) *agenticv1alpha1.XAccessPolicy {
+func newTestAccessPolicy(name, ns, targetName, targetKind, principal string) *agenticv1alpha2.XAccessPolicy {
 	var group string
 	if targetKind == "Gateway" {
 		group = gatewayv1.GroupName
 	} else {
 		group = agenticv0alpha0.GroupName
 	}
-	return &agenticv1alpha1.XAccessPolicy{
+	return &agenticv1alpha2.XAccessPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns},
-		Spec: agenticv1alpha1.AccessPolicySpec{
+		Spec: agenticv1alpha2.AccessPolicySpec{
 			TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
 				LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
 					Group: gatewayv1.Group(group),
@@ -118,23 +118,23 @@ func newTestAccessPolicy(name, ns, targetName, targetKind, principal string) *ag
 					Name:  gatewayv1.ObjectName(targetName),
 				},
 			}},
-			Action: agenticv1alpha1.ActionTypeAllow,
-			Rules: []agenticv1alpha1.AccessRule{{
+			Action: agenticv1alpha2.ActionTypeAllow,
+			Rules: []agenticv1alpha2.AccessRule{{
 				Name: "rule-1",
-				Source: agenticv1alpha1.AccessRuleSource{
-					Type:   agenticv1alpha1.AuthorizationSourceTypeSPIFFE,
-					SPIFFE: (*agenticv1alpha1.AuthorizationSourceSPIFFE)(&principal),
+				Source: agenticv1alpha2.AccessRuleSource{
+					Type:   agenticv1alpha2.AuthorizationSourceTypeSPIFFE,
+					SPIFFE: (*agenticv1alpha2.AuthorizationSourceSPIFFE)(&principal),
 				},
 			}},
 		},
-		Status: agenticv1alpha1.AccessPolicyStatus{
+		Status: agenticv1alpha2.AccessPolicyStatus{
 			Ancestors: []gatewayv1.PolicyAncestorStatus{
 				{
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(agenticv1alpha1.PolicyConditionAccepted),
+							Type:               string(agenticv1alpha2.PolicyConditionAccepted),
 							Status:             metav1.ConditionTrue,
-							Reason:             string(agenticv1alpha1.PolicyReasonAccepted),
+							Reason:             string(agenticv1alpha2.PolicyReasonAccepted),
 							LastTransitionTime: metav1.Now(),
 						},
 					},

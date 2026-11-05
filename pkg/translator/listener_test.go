@@ -37,7 +37,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/fake"
 	gatewayinformers "sigs.k8s.io/gateway-api/pkg/client/informers/externalversions"
 
-	agenticv1alpha1 "sigs.k8s.io/kube-agentic-networking/api/v1alpha1"
+	agenticv1alpha2 "sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 	agenticclient "sigs.k8s.io/kube-agentic-networking/k8s/client/clientset/versioned/fake"
 	agenticinformers "sigs.k8s.io/kube-agentic-networking/k8s/client/informers/externalversions"
 	"sigs.k8s.io/kube-agentic-networking/pkg/constants"
@@ -227,7 +227,7 @@ func TestBuildDownstreamTLSContext(t *testing.T) {
 func TestTranslateListenerToFilterChain(t *testing.T) {
 	agenticClient := agenticclient.NewSimpleClientset()
 	agenticInformerFactory := agenticinformers.NewSharedInformerFactory(agenticClient, 0)
-	accessPolicyLister := agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Lister()
+	accessPolicyLister := agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Lister()
 
 	gwClient := gatewayclient.NewSimpleClientset()
 	gwInformerFactory := gatewayinformers.NewSharedInformerFactory(gwClient, 0)
@@ -361,10 +361,10 @@ func TestBuildHTTPFilters(t *testing.T) {
 		{
 			name: "0 Gateway-level Policies, 0 Backend-level policies, 2 external auth policies",
 			policies: []runtime.Object{
-				func() *agenticv1alpha1.XAccessPolicy {
+				func() *agenticv1alpha2.XAccessPolicy {
 					p := newTestAccessPolicy("ext-auth-policy-1", ns, gwName, "Gateway", "spiffe://cluster.local/ns/ns1/sa/sa1") // gateway we check the expected filters for
 					p.Spec.Rules[0].Name = "ext-rule-1"
-					p.Spec.Action = agenticv1alpha1.ActionTypeExternalAuth
+					p.Spec.Action = agenticv1alpha2.ActionTypeExternalAuth
 					p.Spec.ExternalAuth = &gatewayv1.HTTPExternalAuthFilter{
 						ExternalAuthProtocol: gatewayv1.HTTPRouteExternalAuthGRPCProtocol,
 						BackendRef: gatewayv1.BackendObjectReference{
@@ -373,10 +373,10 @@ func TestBuildHTTPFilters(t *testing.T) {
 					}
 					return p
 				}(),
-				func() *agenticv1alpha1.XAccessPolicy {
+				func() *agenticv1alpha2.XAccessPolicy {
 					p := newTestAccessPolicy("ext-auth-policy-2", ns, "dummy", "Gateway", "spiffe://cluster.local/ns/ns2/sa/sa2") // NOT the gateway we check the expected filters for
 					p.Spec.Rules[0].Name = "ext-rule-2"
-					p.Spec.Action = agenticv1alpha1.ActionTypeExternalAuth
+					p.Spec.Action = agenticv1alpha2.ActionTypeExternalAuth
 					p.Spec.ExternalAuth = &gatewayv1.HTTPExternalAuthFilter{
 						ExternalAuthProtocol: gatewayv1.HTTPRouteExternalAuthGRPCProtocol,
 						BackendRef: gatewayv1.BackendObjectReference{
@@ -402,31 +402,31 @@ func TestBuildHTTPFilters(t *testing.T) {
 				newTestHTTPRoute("route-1", ns, gwName, "backend-1"),
 			},
 			policies: []runtime.Object{
-				func() *agenticv1alpha1.XAccessPolicy {
+				func() *agenticv1alpha2.XAccessPolicy {
 					p := newTestAccessPolicy("gw-policy-1", ns, gwName, "Gateway", "spiffe://cluster.local/ns/ns1/sa/sa1")
 					p.CreationTimestamp = past
 					return p
 				}(),
-				func() *agenticv1alpha1.XAccessPolicy {
+				func() *agenticv1alpha2.XAccessPolicy {
 					p := newTestAccessPolicy("gw-policy-2", ns, gwName, "Gateway", "spiffe://cluster.local/ns/ns2/sa/sa2")
 					p.CreationTimestamp = now
 					return p
 				}(),
-				func() *agenticv1alpha1.XAccessPolicy {
+				func() *agenticv1alpha2.XAccessPolicy {
 					p := newTestAccessPolicy("be-policy-1", ns, "backend-1", "XBackend", "spiffe://cluster.local/ns/ns3/sa/sa3")
 					p.CreationTimestamp = past
 					return p
 				}(),
-				func() *agenticv1alpha1.XAccessPolicy {
+				func() *agenticv1alpha2.XAccessPolicy {
 					p := newTestAccessPolicy("be-policy-2", ns, "backend-1", "XBackend", "spiffe://cluster.local/ns/ns4/sa/sa4")
 					p.CreationTimestamp = now
 					return p
 				}(),
-				func() *agenticv1alpha1.XAccessPolicy {
+				func() *agenticv1alpha2.XAccessPolicy {
 					p := newTestAccessPolicy("ext-auth-policy-1", ns, gwName, "Gateway", "spiffe://cluster.local/ns/ns1/sa/sa1")
 					p.CreationTimestamp = future
 					p.Spec.Rules[0].Name = "ext-rule-1"
-					p.Spec.Action = agenticv1alpha1.ActionTypeExternalAuth
+					p.Spec.Action = agenticv1alpha2.ActionTypeExternalAuth
 					p.Spec.ExternalAuth = &gatewayv1.HTTPExternalAuthFilter{
 						ExternalAuthProtocol: gatewayv1.HTTPRouteExternalAuthGRPCProtocol,
 						BackendRef: gatewayv1.BackendObjectReference{
@@ -435,11 +435,11 @@ func TestBuildHTTPFilters(t *testing.T) {
 					}
 					return p
 				}(),
-				func() *agenticv1alpha1.XAccessPolicy {
+				func() *agenticv1alpha2.XAccessPolicy {
 					p := newTestAccessPolicy("ext-auth-policy-2", ns, gwName, "Gateway", "spiffe://cluster.local/ns/ns2/sa/sa2")
 					p.CreationTimestamp = future
 					p.Spec.Rules[0].Name = "ext-rule-2"
-					p.Spec.Action = agenticv1alpha1.ActionTypeExternalAuth
+					p.Spec.Action = agenticv1alpha2.ActionTypeExternalAuth
 					p.Spec.ExternalAuth = &gatewayv1.HTTPExternalAuthFilter{
 						ExternalAuthProtocol: gatewayv1.HTTPRouteExternalAuthGRPCProtocol,
 						BackendRef: gatewayv1.BackendObjectReference{
@@ -448,11 +448,11 @@ func TestBuildHTTPFilters(t *testing.T) {
 					}
 					return p
 				}(),
-				func() *agenticv1alpha1.XAccessPolicy {
+				func() *agenticv1alpha2.XAccessPolicy {
 					p := newTestAccessPolicy("ext-auth-policy-3", ns, "backend-1", "XBackend", "spiffe://cluster.local/ns/ns2/sa/sa2")
 					p.CreationTimestamp = future
 					p.Spec.Rules[0].Name = "ext-rule-1"
-					p.Spec.Action = agenticv1alpha1.ActionTypeExternalAuth
+					p.Spec.Action = agenticv1alpha2.ActionTypeExternalAuth
 					p.Spec.ExternalAuth = &gatewayv1.HTTPExternalAuthFilter{ // same ExternalAuth values as ext-auth-policy-2
 						ExternalAuthProtocol: gatewayv1.HTTPRouteExternalAuthGRPCProtocol,
 						BackendRef: gatewayv1.BackendObjectReference{
@@ -479,10 +479,10 @@ func TestBuildHTTPFilters(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			agenticClient := agenticclient.NewSimpleClientset(tt.policies...)
 			agenticInformerFactory := agenticinformers.NewSharedInformerFactory(agenticClient, 0)
-			lister := agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Lister()
+			lister := agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Lister()
 
 			for _, p := range tt.policies {
-				_ = agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Informer().GetIndexer().Add(p)
+				_ = agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Informer().GetIndexer().Add(p)
 			}
 
 			// Initialize other listers with empty fake clients to avoid nil pointer panics
@@ -527,9 +527,9 @@ func TestBuildExtAuthzFiltersOldestFirst(t *testing.T) {
 	past := metav1.NewTime(now.Add(-1 * time.Hour))
 
 	policies := []runtime.Object{
-		&agenticv1alpha1.XAccessPolicy{
+		&agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: "policy-future", Namespace: ns, CreationTimestamp: now},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
 					LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
 						Group: gatewayv1.Group(gatewayv1.GroupName),
@@ -537,20 +537,20 @@ func TestBuildExtAuthzFiltersOldestFirst(t *testing.T) {
 						Name:  gatewayv1.ObjectName(gwName),
 					},
 				}},
-				Action: agenticv1alpha1.ActionTypeExternalAuth,
+				Action: agenticv1alpha2.ActionTypeExternalAuth,
 				ExternalAuth: &gatewayv1.HTTPExternalAuthFilter{
 					ExternalAuthProtocol: gatewayv1.HTTPRouteExternalAuthGRPCProtocol,
 					BackendRef: gatewayv1.BackendObjectReference{
 						Name: "ext-auth-svc-future",
 					},
 				},
-				Rules: []agenticv1alpha1.AccessRule{{Name: "rule-1"}},
+				Rules: []agenticv1alpha2.AccessRule{{Name: "rule-1"}},
 			},
 			Status: acceptedStatus,
 		},
-		&agenticv1alpha1.XAccessPolicy{
+		&agenticv1alpha2.XAccessPolicy{
 			ObjectMeta: metav1.ObjectMeta{Name: "policy-past", Namespace: ns, CreationTimestamp: past},
-			Spec: agenticv1alpha1.AccessPolicySpec{
+			Spec: agenticv1alpha2.AccessPolicySpec{
 				TargetRefs: []gatewayv1.LocalPolicyTargetReferenceWithSectionName{{
 					LocalPolicyTargetReference: gatewayv1.LocalPolicyTargetReference{
 						Group: gatewayv1.Group(gatewayv1.GroupName),
@@ -558,14 +558,14 @@ func TestBuildExtAuthzFiltersOldestFirst(t *testing.T) {
 						Name:  gatewayv1.ObjectName(gwName),
 					},
 				}},
-				Action: agenticv1alpha1.ActionTypeExternalAuth,
+				Action: agenticv1alpha2.ActionTypeExternalAuth,
 				ExternalAuth: &gatewayv1.HTTPExternalAuthFilter{
 					ExternalAuthProtocol: gatewayv1.HTTPRouteExternalAuthGRPCProtocol,
 					BackendRef: gatewayv1.BackendObjectReference{
 						Name: "ext-auth-svc-past",
 					},
 				},
-				Rules: []agenticv1alpha1.AccessRule{{Name: "rule-1"}},
+				Rules: []agenticv1alpha2.AccessRule{{Name: "rule-1"}},
 			},
 			Status: acceptedStatus,
 		},
@@ -573,10 +573,10 @@ func TestBuildExtAuthzFiltersOldestFirst(t *testing.T) {
 
 	agenticClient := agenticclient.NewSimpleClientset(policies...)
 	agenticInformerFactory := agenticinformers.NewSharedInformerFactory(agenticClient, 0)
-	lister := agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Lister()
+	lister := agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Lister()
 
 	for _, p := range policies {
-		_ = agenticInformerFactory.Agentic().V1alpha1().XAccessPolicies().Informer().GetIndexer().Add(p)
+		_ = agenticInformerFactory.Agentic().V1alpha2().XAccessPolicies().Informer().GetIndexer().Add(p)
 	}
 
 	gwClient := gatewayclient.NewSimpleClientset()

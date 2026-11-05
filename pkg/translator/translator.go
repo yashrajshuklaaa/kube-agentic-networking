@@ -47,7 +47,7 @@ import (
 	gatewaylistersv1beta1 "sigs.k8s.io/gateway-api/pkg/client/listers/apis/v1beta1"
 
 	agenticlisters "sigs.k8s.io/kube-agentic-networking/k8s/client/listers/api/v0alpha0"
-	agenticlistersv1alpha1 "sigs.k8s.io/kube-agentic-networking/k8s/client/listers/api/v1alpha1"
+	agenticlistersv1alpha2 "sigs.k8s.io/kube-agentic-networking/k8s/client/listers/api/v1alpha2"
 	"sigs.k8s.io/kube-agentic-networking/pkg/constants"
 )
 
@@ -74,7 +74,7 @@ type Translator struct {
 	gatewayLister              gatewaylisters.GatewayLister
 	httprouteLister            gatewaylisters.HTTPRouteLister
 	referenceGrantLister       gatewaylistersv1beta1.ReferenceGrantLister // optional, for Service ref cross-namespace validation
-	accessPolicyLister         agenticlistersv1alpha1.XAccessPolicyLister
+	accessPolicyLister         agenticlistersv1alpha2.XAccessPolicyLister
 	backendLister              agenticlisters.XBackendLister
 	tracingSampleRate          float64
 }
@@ -91,7 +91,7 @@ func New(
 	gatewayLister gatewaylisters.GatewayLister,
 	httpRouteLister gatewaylisters.HTTPRouteLister,
 	referenceGrantLister gatewaylistersv1beta1.ReferenceGrantLister,
-	accessPolicyLister agenticlistersv1alpha1.XAccessPolicyLister,
+	accessPolicyLister agenticlistersv1alpha2.XAccessPolicyLister,
 	backendLister agenticlisters.XBackendLister,
 	tracingSampleRate float64,
 ) *Translator {
@@ -718,7 +718,7 @@ func (t *Translator) validateHTTPRoute(
 	return parentStatuses, allAcceptingListeners
 }
 
-func buildExtAuthzBackendClusters(accessPolicyLister agenticlistersv1alpha1.XAccessPolicyLister) map[string]envoyproxytypes.Resource {
+func buildExtAuthzBackendClusters(accessPolicyLister agenticlistersv1alpha2.XAccessPolicyLister) map[string]envoyproxytypes.Resource {
 	clusters := make(map[string]envoyproxytypes.Resource)
 	accessPolicies, err := accessPolicyLister.List(labels.Everything())
 	if err != nil {
