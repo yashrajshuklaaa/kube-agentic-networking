@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/kube-agentic-networking/api/v1alpha2"
 )
 
-func TestValidateXAccessPolicyV1Alpha1(t *testing.T) {
+func TestValidateXAccessPolicyV1Alpha2(t *testing.T) {
 	ctx := context.Background()
 	basePolicy := v1alpha2.XAccessPolicy{
 		ObjectMeta: metav1.ObjectMeta{
