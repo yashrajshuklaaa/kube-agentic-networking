@@ -37,7 +37,7 @@ spec:
     port: 443
     path: /mcp
 ---
-apiVersion: agentic.networking.x-k8s.io/v1alpha1
+apiVersion: agentic.networking.x-k8s.io/v1alpha2
 kind: XAccessPolicy
 metadata:
   name: auth-policy-local-mcp
@@ -58,15 +58,26 @@ spec:
           namespace: quickstart-ns
       authorization:
         type: Inline
-        mcp:
-          mcpBaseProtocolMethodsOption: MATCH_BASE_PROTOCOL_METHODS
-          methods:
-            - name: tools/call
-              params:
-                - "get-sum"
-                - "get-tiny-image"
+        headers:
+          - name: Mcp-Method
+            value: "tools/call"
+          - name: Mcp-Name
+            type: RegularExpression
+            value: "^(get-sum|get-tiny-image)$"
+    - name: base-protocol-for-adk-agent-sa-local
+      source:
+        type: ServiceAccount
+        serviceAccount:
+          name: adk-agent-sa
+          namespace: quickstart-ns
+      authorization:
+        type: Inline
+        headers:
+          - name: Mcp-Method
+            type: RegularExpression
+            value: "^(initialize|ping|tools/list|completion/.*|logging/.*|notifications/.*)$"
 ---
-apiVersion: agentic.networking.x-k8s.io/v1alpha1
+apiVersion: agentic.networking.x-k8s.io/v1alpha2
 kind: XAccessPolicy
 metadata:
   name: auth-policy-remote-mcp
@@ -86,12 +97,24 @@ spec:
           namespace: quickstart-ns
       authorization:
         type: Inline
-        mcp:
-          mcpBaseProtocolMethodsOption: MATCH_BASE_PROTOCOL_METHODS
-          methods:
-            - name: tools/call
-              params:
-                - "read_wiki_structure"
+        headers:
+          - name: Mcp-Method
+            value: "tools/call"
+          - name: Mcp-Name
+            type: RegularExpression
+            value: "^(read_wiki_structure)$"
+    - name: base-protocol-for-adk-agent-sa-remote
+      source:
+        type: ServiceAccount
+        serviceAccount:
+          name: adk-agent-sa
+          namespace: quickstart-ns
+      authorization:
+        type: Inline
+        headers:
+          - name: Mcp-Method
+            type: RegularExpression
+            value: "^(initialize|ping|tools/list|completion/.*|logging/.*|notifications/.*)$"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

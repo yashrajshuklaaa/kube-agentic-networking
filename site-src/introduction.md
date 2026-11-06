@@ -58,43 +58,32 @@ This defines authorization policies for tool access from AI agents running insid
 The API introduces 2 new CRDs:
 
 - [XBackend](https://github.com/kubernetes-sigs/kube-agentic-networking/blob/main/api/v0alpha0/backend_types.go) (`agentic.networking.x-k8s.io/v0alpha0`): describes a backend in agentic networking.
-- [XAccessPolicy](https://github.com/kubernetes-sigs/kube-agentic-networking/blob/main/api/v1alpha1/accesspolicy_types.go) (`agentic.networking.x-k8s.io/v1alpha1`): describes who can access what in relation to agentic networking backends or Gateways. The v1alpha1 API is the storage version; an older v0alpha0 shape is still served for compatibility but should not be used for new policies.
+- [XAccessPolicy](https://github.com/kubernetes-sigs/kube-agentic-networking/blob/main/api/v1alpha2/accesspolicy_types.go) (`agentic.networking.x-k8s.io/v1alpha2`): describes who can access what in relation to agentic networking backends or Gateways. The v1alpha2 API is the storage version. Older v1alpha1 and v0alpha0 shapes are still served for compatibility but should not be used for new policies; the v1alpha1 `mcp` block is no longer enforced.
 
-Key v1alpha1 concepts:
+Key v1alpha2 concepts:
 
 - `spec.action`: `Allow` (inline authorization in rules) or `ExternalAuth` (delegate to `spec.externalAuth`).
-- Tool allowlists use `authorization.type: Inline` with `mcp.methods` (for example, `tools/call` with `params` listing tool names), not a flat `tools:` list on rules.
+- Tool allowlists use `authorization.type: Inline` with `headers` that match the MCP request headers (for example, `Mcp-Method: tools/call` and `Mcp-Name` listing tool names), not a flat `tools:` list on rules.
 - See the [API reference](reference/spec/) and [quickstart](guides/quickstart/README.md) for current examples.
 
-#### MCP `params` matching
+#### MCP header matching
 
-In MCP JSON-RPC requests, the `params` object is method-specific. In `spec.rules[].authorization.mcp.methods[].params`, each listed value is matched against the `name` field in the MCP request's `params` object.
+MCP requests carry their method and, for `tools/call`, the tool name in standard HTTP headers.
+In `spec.rules[].authorization.headers`, match `Mcp-Method` against the MCP method and `Mcp-Name`
+against the tool name. `Mcp-Name` applies to `tools/call`. Base protocol methods such as
+`initialize` and `tools/list` carry no `Mcp-Name`, so allow them with a separate rule that
+matches `Mcp-Method`.
 
-| MCP method | Currently matched field |
-| --- | --- |
-| `prompts/get` | `name` |
-| `tools/call` | `name` |
-| `resources/subscribe` | `name` |
-| `resources/unsubscribe` | `name` |
-| `resources/read` | `name` |
-
-> **Known limitation:** In the MCP protocol, resource methods use `params.uri` rather than `params.name`. The prototype implementation currently matches `params.name` for all methods, including resources. Matching against `params.uri` for resource methods is not yet implemented and will be addressed separately.
-
-For example, a `tools/call` request such as:
-
-```json
-{
-  "method": "tools/call",
-  "params": {
-    "name": "get-sum",
-    "arguments": {"a": 2, "b": 3}
-  },
-  "jsonrpc": "2.0",
-  "id": 1
-}
+```yaml
+authorization:
+  type: Inline
+  headers:
+  - name: Mcp-Method
+    value: tools/call
+  - name: Mcp-Name
+    type: RegularExpression
+    value: "^(get-sum|echo)$"
 ```
-
-is matched by a `params` value of `get-sum`.
 
 ## Who is working on this project?
 

@@ -208,7 +208,7 @@ func TestControllerE2E(t *testing.T) {
 
 	t.Run("Case 5: Patch Gateway policy to allow get-sum", func(t *testing.T) {
 		// Modifying Gateway Policy: Allowing 'get-sum' to align with Backend policy.
-		patchGW := `[{"op": "replace", "path": "/spec/rules/0/authorization/mcp/methods", "value": [{"name": "tools/call", "params": ["get-sum"]}]}]`
+		patchGW := `[{"op": "replace", "path": "/spec/rules/0/authorization/headers", "value": [{"name": "Mcp-Method", "value": "tools/call"}, {"name": "Mcp-Name", "value": "get-sum"}]}]`
 		runKubectl(t, "patch", "xaccesspolicy", "e2e-gateway-level-policy", "-n", namespace, "--type=json", "-p", patchGW)
 
 		mcp.assertToolCall(t, "get-sum", `{"a":2,"b":3}`,
@@ -902,6 +902,7 @@ func execMCPCurl(t *testing.T, gatewayIP string, pod types.NamespacedName, mcpPa
 		"-H", "Content-Type: application/json",
 		"-H", "Accept: application/json, text/event-stream",
 		"-H", "mcp-protocol-version: 2025-11-25",
+		"-H", "Mcp-Method: initialize",
 		"--data-raw", `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl-client","version":"1.0.0"}}}`,
 		mcpGatewayURL(gatewayIP, mcpPath))
 }
@@ -946,7 +947,16 @@ func (m *mcpTestSession) doMCPRequest(t *testing.T, method, paramsJSON string) (
 		return 0, 0, respBody{}, "", fmt.Errorf("invalid pod reference in MCP session: %v", m.pod)
 	}
 
-	out, err := runKubectlOutput(t, "exec", m.pod.Name, "-n", m.pod.Namespace, "--",
+	var nameHdr []string
+	if method == "tools/call" {
+		var pj struct {
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal([]byte(paramsJSON), &pj); err == nil && pj.Name != "" {
+			nameHdr = []string{"-H", "Mcp-Name: " + pj.Name}
+		}
+	}
+	args := []string{"exec", m.pod.Name, "-n", m.pod.Namespace, "--",
 		"curl", "-ks", "-w", "\n%{http_code}",
 		"--cert", m.certPath,
 		"--key", m.keyPath,
@@ -955,8 +965,11 @@ func (m *mcpTestSession) doMCPRequest(t *testing.T, method, paramsJSON string) (
 		"-H", "Accept: application/json, text/event-stream",
 		"-H", "mcp-protocol-version: 2025-11-25",
 		"-H", fmt.Sprintf("mcp-session-id: %s", m.sessionID),
-		"--data-raw", data,
-		mcpGatewayURL(m.gatewayIP, m.mcpPath))
+		"-H", fmt.Sprintf("Mcp-Method: %s", method),
+	}
+	args = append(args, nameHdr...)
+	args = append(args, "--data-raw", data, mcpGatewayURL(m.gatewayIP, m.mcpPath))
+	out, err := runKubectlOutput(t, args...)
 	if err != nil {
 		return 0, 0, respBody{}, "", fmt.Errorf("failed MCP request %q: %w", method, err)
 	}
