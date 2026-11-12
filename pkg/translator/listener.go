@@ -516,6 +516,57 @@ func buildObservabilityLuaFilter() (*hcm.HttpFilter, error) {
 	}, nil
 }
 
+// mcpHeaderSyncLuaScript makes Mcp-Method and Mcp-Name trustworthy for header-based
+// authorization. It always strips client-supplied values, then sets them from the
+// body metadata parsed by the MCP filter, which must run before this filter.
+// Limitation: names are written verbatim, so non-ASCII values are not Base64-encoded
+// as SEP-2243 describes.
+const mcpHeaderSyncLuaScript = `
+function envoy_on_request(handle)
+  local headers = handle:headers()
+  headers:remove("mcp-method")
+  headers:remove("mcp-name")
+
+  local meta = handle:streamInfo():dynamicMetadata():get("%s")
+  if meta == nil then
+    return
+  end
+
+  local method = meta["method"]
+  if type(method) == "string" and method ~= "" then
+    headers:add("mcp-method", method)
+  end
+
+  local params = meta["params"]
+  if type(params) == "table" then
+    local name = params["name"]
+    if type(name) == "string" and name ~= "" then
+      headers:add("mcp-name", name)
+    end
+  end
+end
+`
+
+func buildMCPHeaderSyncLuaFilter() (*hcm.HttpFilter, error) {
+	luaCfg := &luav3.Lua{
+		DefaultSourceCode: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineString{
+				InlineString: fmt.Sprintf(mcpHeaderSyncLuaScript, constants.MCPProxyFilterName),
+			},
+		},
+	}
+	luaAny, err := anypb.New(luaCfg)
+	if err != nil {
+		return nil, err
+	}
+	return &hcm.HttpFilter{
+		Name: constants.MCPHeaderSyncLuaFilterName,
+		ConfigType: &hcm.HttpFilter_TypedConfig{
+			TypedConfig: luaAny,
+		},
+	}, nil
+}
+
 func buildMetadataTag(tag, filter string, pathKeys ...string) *tracingv3.CustomTag {
 	segments := make([]*metadatav3.MetadataKey_PathSegment, len(pathKeys))
 	for i, k := range pathKeys {
@@ -545,6 +596,12 @@ func buildMetadataTag(tag, filter string, pathKeys ...string) *tracingv3.CustomT
 func (t *Translator) buildHTTPFilters(gateway *gatewayv1.Gateway) ([]*hcm.HttpFilter, error) {
 	// 1. Add MCP filter.
 	mcpFilter, err := buildMCPFilter()
+	if err != nil {
+		return nil, err
+	}
+
+	// 1b. Add MCP header-sync Lua filter (overwrites Mcp-Method/Mcp-Name from the body).
+	headerSyncFilter, err := buildMCPHeaderSyncLuaFilter()
 	if err != nil {
 		return nil, err
 	}
@@ -602,12 +659,14 @@ func (t *Translator) buildHTTPFilters(gateway *gatewayv1.Gateway) ([]*hcm.HttpFi
 
 	// Compose the list in strict order:
 	// 1. MCP (must be first to populate metadata for RBAC)
+	// 1b. MCP header sync (strips client Mcp-* headers and sets them from the body)
 	// 2. ExternalAuthRBAC triggers (shadowRules, Gateway then Backend)
 	// 3. ExtAuthz (must be between triggers and allows)
 	// 4. Allows (Gateway then Backend)
 	// 5. Router (must be last)
 	var filters []*hcm.HttpFilter
 	filters = append(filters, mcpFilter)
+	filters = append(filters, headerSyncFilter) // must directly follow MCP, before any RBAC
 	if gatewayExtAuthFilter != nil {
 		filters = append(filters, gatewayExtAuthFilter)
 	}

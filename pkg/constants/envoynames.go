@@ -52,6 +52,11 @@ const (
 
 	// ObservabilityLuaFilterName is the Lua filter that derives security event attributes from RBAC/MCP metadata.
 	ObservabilityLuaFilterName = "envoy.filters.http.lua.observability"
+
+	// MCPHeaderSyncLuaFilterName is the Lua filter that overwrites the Mcp-Method and
+	// Mcp-Name request headers with values derived from the parsed MCP request body.
+	MCPHeaderSyncLuaFilterName = "envoy.filters.http.lua.mcp_header_sync"
+
 	// ObservabilityMetadataNamespace is the dynamic metadata namespace written by the observability Lua filter.
 	ObservabilityMetadataNamespace = "agentic_obs"
 )

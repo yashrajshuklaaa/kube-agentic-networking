@@ -320,6 +320,7 @@ func TestBuildHTTPFilters(t *testing.T) {
 			policies: []runtime.Object{},
 			expected: []string{
 				"envoy.filters.http.mcp",
+				constants.MCPHeaderSyncLuaFilterName,
 				constants.BackendExtAuthRBACFilterName,
 				constants.BackendAllowRBACFilterName,
 				constants.ObservabilityLuaFilterName,
@@ -334,6 +335,7 @@ func TestBuildHTTPFilters(t *testing.T) {
 			},
 			expected: []string{
 				"envoy.filters.http.mcp",
+				constants.MCPHeaderSyncLuaFilterName,
 				constants.BackendExtAuthRBACFilterName,
 				constants.GatewayAllowRBACFilterName,
 				constants.BackendAllowRBACFilterName,
@@ -352,6 +354,7 @@ func TestBuildHTTPFilters(t *testing.T) {
 			},
 			expected: []string{
 				"envoy.filters.http.mcp",
+				constants.MCPHeaderSyncLuaFilterName,
 				constants.BackendExtAuthRBACFilterName,
 				constants.BackendAllowRBACFilterName,
 				constants.ObservabilityLuaFilterName,
@@ -388,6 +391,7 @@ func TestBuildHTTPFilters(t *testing.T) {
 			},
 			expected: []string{
 				"envoy.filters.http.mcp",
+				constants.MCPHeaderSyncLuaFilterName,
 				constants.GatewayExtAuthRBACFilterName,
 				constants.BackendExtAuthRBACFilterName,
 				"envoy.filters.http.ext_authz",
@@ -464,6 +468,7 @@ func TestBuildHTTPFilters(t *testing.T) {
 			},
 			expected: []string{
 				"envoy.filters.http.mcp",
+				constants.MCPHeaderSyncLuaFilterName,
 				constants.GatewayExtAuthRBACFilterName,
 				constants.BackendExtAuthRBACFilterName,
 				"envoy.filters.http.ext_authz",
