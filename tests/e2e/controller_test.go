@@ -230,6 +230,13 @@ func TestControllerE2E(t *testing.T) {
 		)
 	})
 
+	t.Run("Case 5b: spoofed Mcp-Name must not bypass the tool allow-list", func(t *testing.T) {
+		// Both policies allow only get-sum. The headers claim get-sum, the body calls get-env.
+		spoofMCPHeaders = map[string]string{"Mcp-Method": "tools/call", "Mcp-Name": "get-sum"}
+		defer func() { spoofMCPHeaders = nil }()
+		mcp.assertToolCallForbidden(t, "get-env", `{}`)
+	})
+
 	t.Run("Case 6: CEL policy (allows only get-sum)", func(t *testing.T) {
 		// Clean up previous policies first to avoid interference
 		runKubectl(t, "delete", "xaccesspolicy", "e2e-gateway-level-policy", "-n", namespace, "--ignore-not-found")
@@ -902,7 +909,7 @@ func execMCPCurl(t *testing.T, gatewayIP string, pod types.NamespacedName, mcpPa
 		"-H", "Content-Type: application/json",
 		"-H", "Accept: application/json, text/event-stream",
 		"-H", "mcp-protocol-version: 2025-11-25",
-		"-H", "Mcp-Method: initialize",
+		"-H", initializeMethodHeader(),
 		"--data-raw", `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"curl-client","version":"1.0.0"}}}`,
 		mcpGatewayURL(gatewayIP, mcpPath))
 }
@@ -968,6 +975,7 @@ func (m *mcpTestSession) doMCPRequest(t *testing.T, method, paramsJSON string) (
 		"-H", fmt.Sprintf("Mcp-Method: %s", method),
 	}
 	args = append(args, nameHdr...)
+	args = adjustMCPHeaderArgs(args)
 	args = append(args, "--data-raw", data, mcpGatewayURL(m.gatewayIP, m.mcpPath))
 	out, err := runKubectlOutput(t, args...)
 	if err != nil {
