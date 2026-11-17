@@ -80,8 +80,8 @@ func (c *Controller) onAccessPolicyAdd(obj interface{}) {
 		return
 	}
 
-	// Validate CEL expressions.
-	if !c.validateCELSpec(context.Background(), policy) {
+	// Validate rules and CEL expressions.
+	if !c.validateRules(context.Background(), policy) {
 		return
 	}
 
@@ -102,8 +102,8 @@ func (c *Controller) onAccessPolicyUpdate(old, newObj interface{}) {
 			}
 		}
 
-		// Validate CEL expressions.
-		if !c.validateCELSpec(context.Background(), newPolicy) {
+		// Validate rules and CEL expressions.
+		if !c.validateRules(context.Background(), newPolicy) {
 			return
 		}
 
@@ -363,19 +363,24 @@ func (c *Controller) updateAccessPolicyStatus(ctx context.Context, policy *agent
 	})
 }
 
-// validateCELSpec validates that all CEL expressions in the policy are syntactically valid.
+// validateRules validates that every rule is translatable without widening access
+// (see translator.ValidateAuthorization) and that all CEL expressions are syntactically valid.
 // It returns true if all expressions are valid, false otherwise.
 // It also updates the policy status accordingly.
-func (c *Controller) validateCELSpec(ctx context.Context, policy *agenticv1alpha2.XAccessPolicy) bool {
+func (c *Controller) validateRules(ctx context.Context, policy *agenticv1alpha2.XAccessPolicy) bool {
 	if policy.Spec.Rules == nil {
 		return true
 	}
 
 	for _, rule := range policy.Spec.Rules {
+		if err := translator.ValidateAuthorization(rule.Authorization); err != nil {
+			c.rejectPolicyForAllTargets(ctx, policy, gwapiv1.PolicyReasonInvalid, fmt.Sprintf("rule %q: %v", rule.Name, err))
+			return false
+		}
 		if rule.Authorization != nil && rule.Authorization.Type == agenticv1alpha2.AuthorizationRuleTypeCEL && rule.Authorization.CEL != nil {
 			if _, err := translator.CompileCelExpression(rule.Authorization.CEL.Expression); err != nil {
 				msg := fmt.Sprintf("Failed to compile CEL expression %q: %v", rule.Authorization.CEL.Expression, err)
-				c.rejectPolicyForAllTargets(ctx, policy, msg)
+				c.rejectPolicyForAllTargets(ctx, policy, agenticv1alpha2.PolicyReasonInvalidCEL, msg)
 				return false
 			}
 		}
@@ -384,9 +389,9 @@ func (c *Controller) validateCELSpec(ctx context.Context, policy *agenticv1alpha
 	return true
 }
 
-func (c *Controller) rejectPolicyForAllTargets(ctx context.Context, policy *agenticv1alpha2.XAccessPolicy, message string) {
+func (c *Controller) rejectPolicyForAllTargets(ctx context.Context, policy *agenticv1alpha2.XAccessPolicy, reason gwapiv1.PolicyConditionReason, message string) {
 	for _, targetRef := range policy.Spec.TargetRefs {
-		if err := c.updateAccessPolicyStatus(ctx, policy, targetRef, false, agenticv1alpha2.PolicyReasonInvalidCEL, message); err != nil {
+		if err := c.updateAccessPolicyStatus(ctx, policy, targetRef, false, reason, message); err != nil {
 			runtime.HandleError(fmt.Errorf("failed to update AccessPolicy status: %w", err))
 		}
 	}
