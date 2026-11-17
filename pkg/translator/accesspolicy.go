@@ -343,6 +343,12 @@ func (t *Translator) translateAccessRuleToRBACPolicy(policyNamespace string, rul
 		Principals: principalIDs,
 	}
 
+	// Fail closed: never translate a malformed authorization block into allow-any.
+	if err := ValidateAuthorization(rule.Authorization); err != nil {
+		klog.Errorf("Skipping rule %q: %v", rule.Name, err)
+		return nil
+	}
+
 	var authPerms []*rbacconfigv3.Permission
 	if rule.Authorization != nil {
 		switch rule.Authorization.Type {
