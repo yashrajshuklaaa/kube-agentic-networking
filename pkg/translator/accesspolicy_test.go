@@ -403,9 +403,6 @@ func TestBuildRBACConfigWithoutCommonPolicies(t *testing.T) {
 			Rules: []agenticv1alpha2.AccessRule{
 				{
 					Name: "custom-rule",
-					Authorization: &agenticv1alpha2.AuthorizationRule{
-						Type: agenticv1alpha2.AuthorizationRuleTypeInline,
-					},
 				},
 			},
 		},
@@ -644,30 +641,6 @@ func TestTranslateAccessPolicyToRBAC(t *testing.T) {
 				"rule-1": {
 					principal:   "spiffe://example.com/ns/default/sa/caller",
 					permissions: []string{"tool-1"},
-				},
-			},
-		},
-		{
-			name: "one rule with empty tools",
-			accessPolicy: func() *agenticv1alpha2.XAccessPolicy {
-				p := newTestAccessPolicy("policy-2", "default", "dummy", "Gateway", "spiffe://example.com/ns/default/sa/caller")
-				p.Spec.Rules[0].Authorization = &agenticv1alpha2.AuthorizationRule{
-					Type: agenticv1alpha2.AuthorizationRuleTypeInline,
-				}
-				return p
-			}(),
-			expectedRules: map[string]expectedRule{
-				"rule-1": {
-					principal:           "spiffe://example.com/ns/default/sa/caller",
-					permissions:         []string{},
-					expectAnyPermission: true,
-				},
-			},
-			expectedShadowRules: map[string]expectedRule{
-				"rule-1": {
-					principal:           "spiffe://example.com/ns/default/sa/caller",
-					permissions:         []string{},
-					expectAnyPermission: true,
 				},
 			},
 		},
