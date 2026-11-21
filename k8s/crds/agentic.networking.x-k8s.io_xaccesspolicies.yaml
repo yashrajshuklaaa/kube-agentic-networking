@@ -1766,7 +1766,7 @@ spec:
         required:
         - spec
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -2198,6 +2198,12 @@ spec:
                         rule: 'self.type == ''CEL'' ? has(self.cel) : true'
                       - message: cel must not be specified when type is set to 'Inline'
                         rule: 'self.type == ''Inline'' ? !has(self.cel) : true'
+                      - message: at least one of methods, paths, headers, hosts or
+                          ports must be specified when type is 'Inline'
+                        rule: self.type != 'Inline' || (has(self.methods) && size(self.methods)
+                          > 0) || (has(self.paths) && size(self.paths) > 0) || (has(self.headers)
+                          && size(self.headers) > 0) || (has(self.hosts) && size(self.hosts)
+                          > 0) || (has(self.ports) && size(self.ports) > 0)
                     name:
                       description: |-
                         Name specifies the name of the rule.

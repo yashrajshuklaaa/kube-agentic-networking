@@ -73,6 +73,24 @@ func TestValidateXAccessPolicyV1Alpha2(t *testing.T) {
 			},
 		},
 		{
+			desc: "Inline rule without any matcher is rejected",
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				p.Spec.Rules[0].Authorization = &v1alpha2.AuthorizationRule{
+					Type: v1alpha2.AuthorizationRuleTypeInline,
+				}
+			},
+			wantErrors: []string{"at least one of methods, paths, headers, hosts or ports must be specified"},
+		},
+		{
+			desc: "Inline rule with a single method matcher is accepted",
+			mutate: func(p *v1alpha2.XAccessPolicy) {
+				p.Spec.Rules[0].Authorization = &v1alpha2.AuthorizationRule{
+					Type:    v1alpha2.AuthorizationRuleTypeInline,
+					Methods: []v1alpha2.HTTPMethod{"GET"},
+				}
+			},
+		},
+		{
 			desc: "heterogeneous target kinds",
 			mutate: func(p *v1alpha2.XAccessPolicy) {
 				p.Spec.TargetRefs = append(p.Spec.TargetRefs, gwapiv1.LocalPolicyTargetReferenceWithSectionName{
