@@ -171,6 +171,7 @@ type AuthorizationSourceServiceAccount struct {
 // +kubebuilder:validation:XValidation:message="cel must be specified when type is set to 'CEL'",rule="self.type == 'CEL' ? has(self.cel) : true"
 // +kubebuilder:validation:XValidation:message="cel must not be specified when type is set to 'Inline'",rule="self.type == 'Inline' ? !has(self.cel) : true"
 // AuthorizationRule defines the specific authorization criteria that requests must meet.
+// +kubebuilder:validation:XValidation:message="at least one of methods, paths, headers, hosts or ports must be specified when type is 'Inline'",rule="self.type != 'Inline' || (has(self.methods) && size(self.methods) > 0) || (has(self.paths) && size(self.paths) > 0) || (has(self.headers) && size(self.headers) > 0) || (has(self.hosts) && size(self.hosts) > 0) || (has(self.ports) && size(self.ports) > 0)"
 type AuthorizationRule struct {
 	// +unionDiscriminator
 	// +required

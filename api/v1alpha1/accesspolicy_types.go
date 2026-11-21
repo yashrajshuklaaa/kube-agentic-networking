@@ -378,6 +378,7 @@ type AccessPolicyStatus struct {
 // +kubebuilder:subresource:status
 
 // XAccessPolicy is the Schema for the accesspolicies API.
+// +kubebuilder:unservedversion
 type XAccessPolicy struct {
 	metav1.TypeMeta `json:",inline"`
 

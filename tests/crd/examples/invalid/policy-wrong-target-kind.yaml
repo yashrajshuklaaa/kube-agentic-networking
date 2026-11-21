@@ -1,12 +1,15 @@
-apiVersion: agentic.networking.x-k8s.io/v1alpha1
+apiVersion: agentic.networking.x-k8s.io/v1alpha2
 kind: XAccessPolicy
 metadata:
-  name: policy-v1alpha1-invalid-mcp-method-params
+  name: policy-wrong-target-kind
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: Gateway
     name: my-gateway
+  - group: agentic.networking.x-k8s.io
+    kind: XBackend
+    name: my-backend
   action: Allow
   rules:
   - name: allow-sa
@@ -14,10 +17,3 @@ spec:
       type: ServiceAccount
       serviceAccount:
         name: my-sa
-    authorization:
-      type: Inline
-      mcp:
-        methods:
-        - name: prompts/list
-          params:
-          - disallowedParam

@@ -58,7 +58,7 @@ This defines authorization policies for tool access from AI agents running insid
 The API introduces 2 new CRDs:
 
 - [XBackend](https://github.com/kubernetes-sigs/kube-agentic-networking/blob/main/api/v0alpha0/backend_types.go) (`agentic.networking.x-k8s.io/v0alpha0`): describes a backend in agentic networking.
-- [XAccessPolicy](https://github.com/kubernetes-sigs/kube-agentic-networking/blob/main/api/v1alpha1/accesspolicy_types.go) (`agentic.networking.x-k8s.io/v1alpha1`): describes who can access what in relation to agentic networking backends or Gateways. The v1alpha1 API is the storage version; an older v0alpha0 shape is still served for compatibility but should not be used for new policies.
+- [XAccessPolicy](https://github.com/kubernetes-sigs/kube-agentic-networking/blob/main/api/v1alpha2/accesspolicy_types.go) (`agentic.networking.x-k8s.io/v1alpha2`): describes who can access what in relation to agentic networking backends or Gateways. The v1alpha2 API is the storage version. v1alpha1 is no longer served (its `mcp` block is removed). The older v0alpha0 shape is still served for compatibility but should not be used for new policies.
 
 Key v1alpha1 concepts:
 
