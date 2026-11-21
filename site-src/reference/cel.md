@@ -22,7 +22,7 @@ Because a CEL rule never matches other requests, including the MCP `initialize` 
 usually needs a second, `Inline` rule that allows the base MCP protocol methods:
 
 ```yaml
-apiVersion: agentic.networking.x-k8s.io/v1alpha1
+apiVersion: agentic.networking.x-k8s.io/v1alpha2
 kind: XAccessPolicy
 metadata:
   name: allow-verify-tools
@@ -50,8 +50,10 @@ spec:
         name: my-agent
     authorization:
       type: Inline
-      mcp:
-        mcpBaseProtocolMethodsOption: MATCH_BASE_PROTOCOL_METHODS
+      headers:
+      - name: Mcp-Method
+        type: RegularExpression
+        value: "^(initialize|ping|tools/list|completion/.*|logging/.*|notifications/.*)$"
 ```
 
 ## Variables
